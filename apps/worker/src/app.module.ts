@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { BullModule } from "@nestjs/bull";
+import { LetterboxdModule } from "./letterboxd/letterboxd.module";
+import { PrismaModule } from "./prisma/prisma.module";
+import { TmdbModule } from "./tmdb/tmdb.module";
 
 @Module({
   imports: [
@@ -15,8 +18,9 @@ import { BullModule } from "@nestjs/bull";
         port: parseInt(process.env.REDIS_PORT || "6379", 10),
       },
     }),
+    PrismaModule,
+    TmdbModule,
+    LetterboxdModule,
   ],
-  controllers: [],
-  providers: [],
 })
 export class AppModule {}
