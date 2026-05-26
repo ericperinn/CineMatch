@@ -1,74 +1,95 @@
 """
-CineMatch ML Service — SBERT embeddings microservice.
-Runs on port 8000 by default.
+CineMatch ML Service — Sentence-BERT embeddings microservice.
+
+Loads `sentence-transformers/all-MiniLM-L6-v2` at startup (384-dim vectors).
+Inference is CPU-only and batched — see `BATCH_LIMIT` below.
 """
 
 import os
-from typing import List
+from contextlib import asynccontextmanager
+from typing import List, Optional
 
-import numpy as np
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from sentence_transformers import SentenceTransformer
 
-app = FastAPI(title="CineMatch ML Service", version="0.1.0")
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DIM = 384
+BATCH_LIMIT = 64  # max texts per /embed call
 
-# ---- Models ----
+# ---- Lifespan: load model once ----
+
+state: dict = {}
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    print(f"Loading SBERT model: {MODEL_NAME} ...")
+    state["model"] = SentenceTransformer(MODEL_NAME)
+    print(f"Model loaded — embedding dim = {state['model'].get_sentence_embedding_dimension()}")
+    yield
+    state.clear()
+
+
+app = FastAPI(title="CineMatch ML Service", version="0.2.0", lifespan=lifespan)
+
+
+# ---- Schemas ----
 
 
 class HealthResponse(BaseModel):
     status: str
     service: str
+    model: Optional[str] = None
+    embedding_dim: Optional[int] = None
 
 
 class EmbedRequest(BaseModel):
-    texts: List[str]
+    texts: List[str] = Field(..., min_length=1, max_length=BATCH_LIMIT)
 
 
 class EmbedResponse(BaseModel):
     embeddings: List[List[float]]
+    model: str
+    dim: int
 
 
-# ---- Health check ----
+# ---- Endpoints ----
 
 
 @app.get("/health", response_model=HealthResponse)
-async def health():
-    return HealthResponse(status="ok", service="cinematch-ml")
-
-
-# ---- Embeddings (mock for now, will be real SBERT later) ----
+async def health() -> HealthResponse:
+    model = state.get("model")
+    if model is None:
+        return HealthResponse(status="loading", service="cinematch-ml")
+    return HealthResponse(
+        status="ok",
+        service="cinematch-ml",
+        model=MODEL_NAME,
+        embedding_dim=model.get_sentence_embedding_dimension(),
+    )
 
 
 @app.post("/embed", response_model=EmbedResponse)
 async def embed(request: EmbedRequest) -> EmbedResponse:
-    """
-    Generate 384-dimensional embeddings for a batch of texts.
-    Currently returns random embeddings (placeholder).
-    Will use Sentence-BERT in production.
-    """
-    batch_size = len(request.texts)
-    embedding_dim = 384
+    model = state.get("model")
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model still loading")
 
-    # TODO: Replace with real SBERT inference
-    # For now, generate random vectors of the right shape
-    embeddings = np.random.randn(batch_size, embedding_dim).tolist()
+    # encode is sync but fast for CPU + small batches; run in the threadpool implicitly via FastAPI
+    embeddings = model.encode(
+        request.texts,
+        batch_size=BATCH_LIMIT,
+        show_progress_bar=False,
+        normalize_embeddings=True,  # so cosine == dot product
+        convert_to_numpy=True,
+    )
 
-    return EmbedResponse(embeddings=embeddings)
-
-
-# ---- Startup / Shutdown ----
-
-
-@app.on_event("startup")
-async def startup_event():
-    print("🤖 CineMatch ML Service starting...")
-    # TODO: Load SBERT model here
-    print("✓ ML Service ready on http://localhost:8000")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    print("🤖 CineMatch ML Service shutting down...")
+    return EmbedResponse(
+        embeddings=embeddings.tolist(),
+        model=MODEL_NAME,
+        dim=model.get_sentence_embedding_dimension(),
+    )
 
 
 if __name__ == "__main__":

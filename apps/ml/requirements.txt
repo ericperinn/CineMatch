@@ -1,9 +1,9 @@
-# Phase 2: minimal deps for mock embeddings — no torch/SBERT yet
+# Phase 5: real SBERT embeddings.
+# torch is pinned to CPU-only wheels via the extra index URL to keep the image
+# small (~250MB vs ~2GB with CUDA libs we don't need).
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 numpy==1.26.2
-
-# Phase 5 (SBERT): uncomment when implementing real embeddings
-# torch==2.1.1+cpu --index-url https://download.pytorch.org/whl/cpu
-# sentence-transformers==2.2.2
+sentence-transformers==2.7.0
+# torch pulled in by sentence-transformers; we override to the CPU build in the Dockerfile

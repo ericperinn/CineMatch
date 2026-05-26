@@ -7,6 +7,7 @@ import { ProfileFetcher } from "./fetchers/profile.fetcher";
 import { WatchlistFetcher } from "./fetchers/watchlist.fetcher";
 import { LetterboxdHttpClient } from "./http.client";
 import { DiscoverMovieProcessor } from "./processors/discover-movie.processor";
+import { EmbedMovieProcessor } from "./processors/embed-movie.processor";
 import { SyncProfileProcessor } from "./processors/sync-profile.processor";
 
 @Module({
@@ -14,6 +15,7 @@ import { SyncProfileProcessor } from "./processors/sync-profile.processor";
     BullModule.registerQueue(
       { name: QUEUE_NAMES.SYNC_PROFILE },
       { name: QUEUE_NAMES.DISCOVER_MOVIE },
+      { name: QUEUE_NAMES.EMBED_MOVIE },
     ),
   ],
   providers: [
@@ -24,6 +26,7 @@ import { SyncProfileProcessor } from "./processors/sync-profile.processor";
     MoviePageFetcher,
     SyncProfileProcessor,
     DiscoverMovieProcessor,
+    EmbedMovieProcessor,
   ],
 })
 export class LetterboxdModule {}

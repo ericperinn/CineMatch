@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { BullModule } from "@nestjs/bull";
 import { LetterboxdModule } from "./letterboxd/letterboxd.module";
+import { MlModule } from "./ml/ml.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { TmdbModule } from "./tmdb/tmdb.module";
 
@@ -20,6 +21,7 @@ import { TmdbModule } from "./tmdb/tmdb.module";
     }),
     PrismaModule,
     TmdbModule,
+    MlModule,
     LetterboxdModule,
   ],
 })

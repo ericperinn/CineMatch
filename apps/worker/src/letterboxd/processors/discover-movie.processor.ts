@@ -1,8 +1,8 @@
-import { Process, Processor } from "@nestjs/bull";
+import { InjectQueue, Process, Processor } from "@nestjs/bull";
 import { Logger } from "@nestjs/common";
-import { Job } from "bull";
+import { Job, Queue } from "bull";
 import { PrismaService } from "../../prisma/prisma.service";
-import { QUEUE_NAMES, DiscoverMovieJob } from "../../queues/queue-names";
+import { QUEUE_NAMES, DiscoverMovieJob, EmbedMovieJob } from "../../queues/queue-names";
 import { TmdbClient } from "../../tmdb/tmdb.client";
 
 @Processor(QUEUE_NAMES.DISCOVER_MOVIE)
@@ -12,6 +12,8 @@ export class DiscoverMovieProcessor {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tmdb: TmdbClient,
+    @InjectQueue(QUEUE_NAMES.EMBED_MOVIE)
+    private readonly embedQueue: Queue<EmbedMovieJob>,
   ) {}
 
   @Process()
@@ -30,11 +32,19 @@ export class DiscoverMovieProcessor {
 
     // Short-circuit if already hydrated. Cheaper than another TMDB call
     // and protects against duplicate enqueues from concurrent syncs.
+    // Still enqueue embed-movie if the embedding is missing — this catches
+    // movies hydrated before SBERT was added.
     const existing = await this.prisma.movie.findUnique({
       where: { id: tmdbId },
-      select: { title: true, year: true },
+      select: { title: true, year: true, overview: true, embeddingUpdatedAt: true },
     });
     if (existing && !existing.title.startsWith("[pending]") && existing.year > 0) {
+      if (!existing.embeddingUpdatedAt && existing.overview?.trim()) {
+        await this.embedQueue.add(
+          { movieId: tmdbId },
+          { removeOnComplete: 200, removeOnFail: 50, attempts: 5, backoff: { type: "exponential", delay: 10_000 } },
+        );
+      }
       return { skipped: true, reason: "already_hydrated" };
     }
 
@@ -62,7 +72,14 @@ export class DiscoverMovieProcessor {
       },
     });
 
-    // TODO(phase-5): enqueue embed-movie here once SBERT is real
+    // Enqueue embedding job — fire-and-forget. Skipped inside the processor
+    // if the overview is empty.
+    if (movie.overview && movie.overview.trim().length > 0) {
+      await this.embedQueue.add(
+        { movieId: tmdbId },
+        { removeOnComplete: 200, removeOnFail: 50, attempts: 5, backoff: { type: "exponential", delay: 10_000 } },
+      );
+    }
 
     return { ok: true, title: movie.title, year };
   }

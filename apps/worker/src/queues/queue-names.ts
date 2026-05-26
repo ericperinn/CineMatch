@@ -18,3 +18,7 @@ export interface DiscoverMovieJob {
   letterboxdSlug?: string;
   tmdbId?: string;
 }
+
+export interface EmbedMovieJob {
+  movieId: string;
+}
