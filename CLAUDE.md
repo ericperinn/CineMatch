@@ -59,6 +59,7 @@ Full rationale in [docs/02-architecture.md](docs/02-architecture.md).
 Project-scoped skills live in `.claude/skills/`. They are invoked by agents to perform repeatable, opinionated workflows. Current skills:
 
 - [commit-cinematch](.claude/skills/commit-cinematch/SKILL.md) — guides agents through writing a Conventional Commit message that matches this project's rules before invoking `git commit`.
+- [prisma-migrate](.claude/skills/prisma-migrate/SKILL.md) — safe Prisma migration workflow: diff, detect destructive ops, apply, verify, manage pgvector index.
 
 When you notice a workflow being repeated more than twice, propose a new skill.
 
