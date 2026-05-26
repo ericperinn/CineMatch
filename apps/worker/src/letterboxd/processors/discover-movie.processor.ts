@@ -28,6 +28,16 @@ export class DiscoverMovieProcessor {
       return { skipped: true, reason: "no_tmdb_key" };
     }
 
+    // Short-circuit if already hydrated. Cheaper than another TMDB call
+    // and protects against duplicate enqueues from concurrent syncs.
+    const existing = await this.prisma.movie.findUnique({
+      where: { id: tmdbId },
+      select: { title: true, year: true },
+    });
+    if (existing && !existing.title.startsWith("[pending]") && existing.year > 0) {
+      return { skipped: true, reason: "already_hydrated" };
+    }
+
     const movie = await this.tmdb.getMovie(tmdbId);
     if (!movie) return { skipped: true, reason: "tmdb_404" };
 

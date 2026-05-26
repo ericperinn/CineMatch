@@ -171,13 +171,13 @@ export class SyncProfileProcessor {
     });
 
     for (const stub of stubs) {
+      // No fixed jobId here: discover may be re-queued legitimately
+      // (e.g. TMDB key was missing on a previous run and is now set, or the
+      // stub was hydrated with bad data and we want a fresh pull).
+      // The processor short-circuits if the row is already hydrated.
       await this.discoverMovieQueue.add(
         { tmdbId: stub.id },
-        {
-          jobId: `discover:${stub.id}`,
-          removeOnComplete: 100,
-          removeOnFail: 50,
-        },
+        { removeOnComplete: 100, removeOnFail: 50, attempts: 3 },
       );
     }
   }
