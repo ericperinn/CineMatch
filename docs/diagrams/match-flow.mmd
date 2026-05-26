@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor A as User A
+    actor B as User B
+    participant WS as WS Gateway
+    participant PG as Postgres+pgvector
+    participant JW as JustWatch
+
+    A->>WS: connect + create session
+    B->>WS: connect + join session
+    WS->>PG: load taste vectors (A, B)
+    WS->>WS: compute midpoint(A, B)
+    WS->>PG: kNN search (cosine, k=20)
+    PG-->>WS: candidate movie IDs
+    WS->>PG: hydrate movie metadata
+    WS-->>A: present batch of movies
+    WS-->>B: present batch of movies
+
+    loop until podium (3 mutual LIKEs)
+        A->>WS: swipe(movieId, LIKE)
+        B->>WS: swipe(movieId, LIKE)
+        WS->>PG: persist swipes
+        alt mutual LIKE
+            WS->>WS: count++ podium
+            WS-->>A: match!
+            WS-->>B: match!
+        end
+    end
+
+    WS->>JW: streaming providers for podium movies
+    JW-->>WS: provider list
+    WS->>PG: mark session COMPLETED
+    WS-->>A: podium + providers
+    WS-->>B: podium + providers

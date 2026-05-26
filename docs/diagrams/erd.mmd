@@ -1,0 +1,83 @@
+erDiagram
+    USER {
+        uuid id PK
+        string name
+        string email UK
+        string passwordHash
+        string letterboxdUsername UK
+        string avatarUrl
+        datetime createdAt
+    }
+
+    FRIENDSHIP {
+        uuid id PK
+        uuid userId FK
+        uuid friendId FK
+        enum status "PENDING, ACCEPTED"
+        datetime createdAt
+    }
+
+    MOVIE {
+        string id PK "TMDB id unificado"
+        string title
+        int year
+        text overview
+        string posterPath
+        vector embedding "pgvector(384)"
+        datetime createdAt
+        datetime embeddingUpdatedAt
+    }
+
+    MATCH_SESSION {
+        uuid id PK
+        uuid hostId FK
+        uuid guestId FK
+        enum mode "DISCOVERY, WATCHLIST, HYBRID"
+        enum status "IN_PROGRESS, COMPLETED, ABANDONED"
+        datetime createdAt
+        datetime finishedAt
+    }
+
+    SWIPE {
+        uuid id PK
+        uuid sessionId FK
+        uuid userId FK
+        string movieId FK
+        enum vote "LIKE, DISLIKE"
+        datetime createdAt
+    }
+
+    USER_MOVIE_TASTE {
+        uuid userId FK
+        string movieId FK
+        enum source "FAVORITE, DIARY"
+        int rating "0-10 (Letterboxd 0.5-5★ × 2)"
+        datetime watchedAt
+        datetime importedAt
+    }
+
+    WATCHLIST_ITEM {
+        uuid userId FK
+        string movieId FK
+        datetime addedAt
+    }
+
+    DISLIKE_COOLDOWN {
+        uuid userId FK
+        string movieId FK
+        datetime expiresAt
+    }
+
+    USER ||--o{ FRIENDSHIP : "envia (userId)"
+    USER ||--o{ FRIENDSHIP : "recebe (friendId)"
+    USER ||--o{ MATCH_SESSION : "host"
+    USER ||--o{ MATCH_SESSION : "guest"
+    USER ||--o{ SWIPE : "vota"
+    MATCH_SESSION ||--o{ SWIPE : "contém"
+    MOVIE ||--o{ SWIPE : "é votado"
+    USER ||--o{ USER_MOVIE_TASTE : "tem gosto por"
+    MOVIE ||--o{ USER_MOVIE_TASTE : "compõe perfil"
+    USER ||--o{ WATCHLIST_ITEM : "salva"
+    MOVIE ||--o{ WATCHLIST_ITEM : "está em"
+    USER ||--o{ DISLIKE_COOLDOWN : "rejeitou"
+    MOVIE ||--o{ DISLIKE_COOLDOWN : "em cooldown"

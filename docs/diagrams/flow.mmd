@@ -1,0 +1,53 @@
+graph TD
+    %% Clients
+    ClientA[Frontend<br/>React/Next/RN — TBD]
+    ClientB[Frontend<br/>React/Next/RN — TBD]
+
+    %% External APIs
+    LB[Letterboxd<br/>RSS + HTML público]
+    TMDB[TMDB API<br/>metadados + sinopses]
+    JW[JustWatch API<br/>streaming providers]
+
+    %% Backend
+    subgraph "NestJS API"
+        WS[WebSocket Gateway<br/>lobby + swipes em tempo real]
+        REST[REST Controllers<br/>auth, friends, histórico]
+        Producer[BullMQ Producer]
+    end
+
+    subgraph "Background"
+        Redis[(Redis<br/>filas + cache + pub-sub)]
+        WProfile[Worker Profile Sync<br/>Letterboxd → DB]
+        WEmbed[Worker Embeddings<br/>sinopse → vetor]
+    end
+
+    subgraph "ML"
+        ML[FastAPI<br/>SBERT inference]
+    end
+
+    subgraph "Persistência"
+        PG[(PostgreSQL<br/>+ pgvector)]
+    end
+
+    ClientA <-->|WebSocket| WS
+    ClientB <-->|WebSocket| WS
+    ClientA -->|REST + JWT| REST
+
+    REST -->|leitura rápida| PG
+    REST -->|dispatch JIT| Producer
+    Producer --> Redis
+
+    Redis --> WProfile
+    Redis --> WEmbed
+    WProfile -->|RSS + scrape| LB
+    WProfile -->|upsert user data| PG
+    WProfile -->|novo filme?| Producer
+
+    WEmbed -->|sinopse| TMDB
+    WEmbed -->|texto → vetor| ML
+    WEmbed -->|salva metadados + vetor| PG
+
+    WS -->|kNN cosine| PG
+    WS -->|metadados visuais| PG
+    WS -->|streaming providers do pódio| JW
+    WS -->|persiste resultado| PG

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where pdftoppm *)",
+      "Bash(pdftotext -layout \"C:\\\\Users\\\\ericd\\\\Downloads\\\\CineMatch - Documento de Especificação Técnica e Requisitos \\(MVP\\).pdf\" \"C:\\\\Users\\\\ericd\\\\Downloads\\\\cinematch_spec.txt\")",
+      "Bash(pdftotext -layout \"C:\\\\Users\\\\ericd\\\\Downloads\\\\CineMatch Project Blueprint.pdf\" \"C:\\\\Users\\\\ericd\\\\Downloads\\\\cinematch_blueprint.txt\")",
+      "Bash(pdftotext \"C:\\\\Users\\\\ericd\\\\Downloads\\\\CineMatch Project Blueprint.pdf\" \"C:\\\\Users\\\\ericd\\\\Downloads\\\\cinematch_blueprint2.txt\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\\\\apps\\\\api\" \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\\\\apps\\\\worker\" \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\\\\apps\\\\ml\" \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\\\\packages\\\\database\" \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\\\\docs\\\\diagrams\" \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\\\\.claude\\\\skills\" && ls -la \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\ericd\\\\OneDrive\\\\Documents\\\\CineMatch\\\\.claude\\\\skills\\\\commit-cinematch\")",
+      "Bash(git init *)"
+    ]
+  }
+}

@@ -1,0 +1,93 @@
+name: cinematch
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: cinematch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cinematch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cinematch}
+      POSTGRES_DB: ${POSTGRES_DB:-cinematch}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./packages/database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinematch} -d ${POSTGRES_DB:-cinematch}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cinematch-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Application services — uncommented as each is scaffolded in later phases.
+  #
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/api/Dockerfile
+  #   container_name: cinematch-api
+  #   restart: unless-stopped
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   environment:
+  #     DATABASE_URL: postgresql://${POSTGRES_USER:-cinematch}:${POSTGRES_PASSWORD:-cinematch}@postgres:5432/${POSTGRES_DB:-cinematch}
+  #     REDIS_URL: redis://redis:6379
+  #     ML_SERVICE_URL: http://ml:8000
+  #     JWT_SECRET: ${JWT_SECRET}
+  #     TMDB_API_KEY: ${TMDB_API_KEY}
+  #     JUSTWATCH_API_KEY: ${JUSTWATCH_API_KEY}
+  #     PORT: 3000
+  #   ports:
+  #     - "${API_PORT:-3000}:3000"
+  #
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/worker/Dockerfile
+  #   container_name: cinematch-worker
+  #   restart: unless-stopped
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   environment:
+  #     DATABASE_URL: postgresql://${POSTGRES_USER:-cinematch}:${POSTGRES_PASSWORD:-cinematch}@postgres:5432/${POSTGRES_DB:-cinematch}
+  #     REDIS_URL: redis://redis:6379
+  #     ML_SERVICE_URL: http://ml:8000
+  #     TMDB_API_KEY: ${TMDB_API_KEY}
+  #     LETTERBOXD_USER_AGENT: ${LETTERBOXD_USER_AGENT:-CineMatch/0.1}
+  #
+  # ml:
+  #   build:
+  #     context: apps/ml
+  #     dockerfile: Dockerfile
+  #   container_name: cinematch-ml
+  #   restart: unless-stopped
+  #   environment:
+  #     PORT: 8000
+  #   ports:
+  #     - "${ML_PORT:-8000}:8000"
+
+volumes:
+  postgres_data:
+  redis_data:

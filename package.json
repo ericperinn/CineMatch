@@ -1,0 +1,16 @@
+{
+  "name": "cinematch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tinder-style movie matcher for couples and groups",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/worker",
+    "packages/database"
+  ]
+}
