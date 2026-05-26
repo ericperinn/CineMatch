@@ -6,6 +6,7 @@ import { AuthModule } from "./auth/auth.module";
 import { FriendsModule } from "./friends/friends.module";
 import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { ProfileModule } from "./profile/profile.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -26,6 +27,7 @@ import { UsersModule } from "./users/users.module";
     AuthModule,
     UsersModule,
     FriendsModule,
+    ProfileModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
