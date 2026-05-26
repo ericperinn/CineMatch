@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.gitignore
+README.md
+.eslintrc.js
+jest.config.js
+**/*.spec.ts
+coverage
