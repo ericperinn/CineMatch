@@ -45,6 +45,15 @@ A spec do produto exige três fontes de dados:
 - Parser: Cheerio, mesmo seletor da grade de filmes do site.
 - Concorrência: 1 página por vez por usuário, delay de 500ms entre páginas.
 
+> ⚠️ **Limitação conhecida (2025)**: o Letterboxd reescreveu a watchlist como
+> componente React lazy-loaded — a resposta HTML inicial não contém mais os
+> slugs dos filmes. O `WatchlistFetcher` atual loga um warning e retorna `[]`
+> quando isso acontece. **Caminho oficial pro MVP é o CSV import** (§6.7). Se
+> precisarmos do JIT por API mais tarde, três opções:
+> - **CSV upload manual** (já planejado como fallback)
+> - **Playwright headless** (custa ~300MB no image, lento)
+> - **Engenharia reversa do endpoint AJAX** que o React chama (instável)
+
 ## 6.4. Etiqueta de scraping
 
 Regras não-negociáveis:
