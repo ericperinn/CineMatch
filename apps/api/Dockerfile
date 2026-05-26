@@ -1,5 +1,5 @@
 # Multi-stage build for NestJS API
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /build
 
@@ -20,7 +20,7 @@ RUN npm run --workspace=@cinematch/database prisma:generate
 RUN npm run --workspace=@cinematch/api build
 
 # Production stage
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
@@ -34,13 +34,17 @@ COPY apps/api/package.json ./apps/api/
 # Install production dependencies only
 RUN npm install --frozen-lockfile --production
 
-# Copy built application and Prisma binaries
+# Copy built application, Prisma binaries, and schema
 COPY --from=builder /build/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /build/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /build/apps/api/dist ./apps/api/dist
+
+# Prisma 5 needs openssl in the runtime image
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates wget && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
 
 CMD ["node", "apps/api/dist/main.js"]

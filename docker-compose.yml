@@ -61,8 +61,6 @@ services:
       NODE_ENV: development
     ports:
       - "${API_PORT:-3000}:3000"
-    networks:
-      - cinematch
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 10s
@@ -92,8 +90,6 @@ services:
       TMDB_API_KEY: ${TMDB_API_KEY}
       LETTERBOXD_USER_AGENT: ${LETTERBOXD_USER_AGENT:-CineMatch/0.1}
       NODE_ENV: development
-    networks:
-      - cinematch
     # Worker has no HTTP port; BullMQ health is implicit (if it stays alive, it's working)
 
   ml:
@@ -106,8 +102,6 @@ services:
       PORT: 8000
     ports:
       - "${ML_PORT:-8001}:8000"
-    networks:
-      - cinematch
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -115,9 +109,6 @@ services:
       retries: 3
       start_period: 15s
 
-networks:
-  cinematch:
-    driver: bridge
 
 volumes:
   postgres_data:
