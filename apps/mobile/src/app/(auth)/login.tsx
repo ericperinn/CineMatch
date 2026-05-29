@@ -6,62 +6,49 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { theme } from '@/constants/theme';
-import { useLoginMutation } from '@/services/queries/auth.queries';
-import { useAuthStore } from '@/store/useAuthStore';
+import { extractApiError, useLoginMutation } from '@/services/queries/auth.queries';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('nina@cinematch.app');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Fake login for now until backend is ready, or use the mutation if API is up
-  // const { mutate: login, isPending } = useLoginMutation();
-  const [isPending, setIsPending] = useState(false);
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const [error, setError] = useState<string | null>(null);
+
+  const { mutate: login, isPending } = useLoginMutation();
+
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !isPending;
 
   const handleLogin = () => {
-    setIsPending(true);
-    // Simulate API call for now to allow testing the UI without backend
-    setTimeout(() => {
-      setAuth('fake-jwt-token', {
-        id: '1',
-        name: 'Nina K',
-        email,
-      });
-      setIsPending(false);
-      router.replace('/(tabs)/home');
-    }, 1000);
-    
-    /* When backend is ready:
-    login({ email, password }, {
-      onSuccess: () => {
-        router.replace('/(tabs)/home');
-      },
-      onError: (err) => {
-        console.error(err);
+    if (!canSubmit) return;
+    setError(null);
+    login(
+      { email: email.trim(), password },
+      {
+        onSuccess: () => router.replace('/(tabs)/home'),
+        onError: (err) => setError(extractApiError(err, 'Invalid email or password')),
       }
-    });
-    */
+    );
   };
 
   return (
     <ScreenContainer padded style={styles.container}>
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        
+
         {/* Header / Avatar */}
         <View style={styles.header}>
-          <Avatar name="Nina K" size={56} ring ringColor={theme.colors.primary} />
+          <Avatar name="CineMatch" size={56} ring ringColor={theme.colors.primary} />
           <View>
             <Text style={styles.title}>Welcome back.</Text>
-            <Text style={styles.subtitle}>3 UNWATCHED MATCHES</Text>
+            <Text style={styles.subtitle}>FIND YOUR NEXT WATCH</Text>
           </View>
         </View>
 
         {/* Social Button Placeholder */}
-        <Button 
-          label="Continue with Letterboxd" 
-          variant="secondary" 
-          style={{ marginBottom: 18 }} 
+        <Button
+          label="Continue with Letterboxd"
+          variant="secondary"
+          disabled
+          style={{ marginBottom: 18 }}
         />
 
         {/* Divider */}
@@ -72,30 +59,35 @@ export default function LoginScreen() {
         </View>
 
         {/* Form */}
-        <Input 
-          label="Email" 
-          value={email} 
-          onChangeText={setEmail} 
-          placeholder="you@email.com" 
+        <Input
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="you@email.com"
           keyboardType="email-address"
           autoCapitalize="none"
+          autoComplete="email"
         />
-        <Input 
-          label="Password" 
-          value={password} 
-          onChangeText={setPassword} 
-          placeholder="••••••••" 
-          secureTextEntry 
+        <Input
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          secureTextEntry
+          onSubmitEditing={handleLogin}
         />
 
         <TouchableOpacity style={styles.forgotPassword}>
           <Text style={styles.forgotPasswordText}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <Button 
-          label="Log in" 
-          onPress={handleLogin} 
-          isLoading={isPending} 
+        {error && <Text style={styles.error}>{error}</Text>}
+
+        <Button
+          label="Log in"
+          onPress={handleLogin}
+          isLoading={isPending}
+          disabled={!canSubmit}
         />
       </View>
 
@@ -164,6 +156,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
+  },
+  error: {
+    fontFamily: theme.typography.fontFamily.sans,
+    fontSize: 13,
+    color: theme.colors.error,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
   },
   footer: {
     alignItems: 'center',

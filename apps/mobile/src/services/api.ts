@@ -1,9 +1,13 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 
-// In Expo, process.env.EXPO_PUBLIC_API_URL can be configured in .env
-// We default to localhost if not set (for iOS simulator) or 10.0.2.2 for Android emulator
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// The CineMatch API is exposed on host port 3001 (3000 is taken by another app).
+// EXPO_PUBLIC_API_URL (set in .env) wins; the fallback covers each runtime:
+// Android emulator reaches the host via 10.0.2.2, iOS simulator/web via localhost.
+// A physical device (Expo Go) needs your machine's LAN IP set in .env.
+const fallbackHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${fallbackHost}:3001`;
 
 export const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
