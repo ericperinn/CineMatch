@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/useAuthStore';
 // Android emulator reaches the host via 10.0.2.2, iOS simulator/web via localhost.
 // A physical device (Expo Go) needs your machine's LAN IP set in .env.
 const fallbackHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${fallbackHost}:3001`;
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${fallbackHost}:3001`;
 
 export const api = axios.create({
   baseURL: `${API_URL}/api/v1`,

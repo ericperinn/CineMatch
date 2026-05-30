@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { theme } from '@/constants/theme';
 import { extractApiError, useRegisterMutation } from '@/services/queries/auth.queries';
+import { tap, warn } from '@/lib/feedback';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -25,12 +26,16 @@ export default function RegisterScreen() {
 
   const handleRegister = () => {
     if (!canSubmit) return;
+    tap();
     setError(null);
     register(
       { name, email, password, letterboxdUsername },
       {
         onSuccess: () => router.replace('/(tabs)/home'),
-        onError: (err) => setError(extractApiError(err, 'Could not create your account')),
+        onError: (err) => {
+          warn();
+          setError(extractApiError(err, 'Could not create your account'));
+        },
       }
     );
   };

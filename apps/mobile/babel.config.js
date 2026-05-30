@@ -46,11 +46,33 @@ function inlineExpoRouterEnv({ types: t }) {
   };
 }
 
+// Some node_modules ship code that uses `import.meta` directly. When Metro
+// emits the web bundle as a regular script (Expo Router single output), the
+// browser refuses with "Cannot use 'import.meta' outside a module". Replace
+// every `import.meta` expression with `{}` so accessors like `import.meta.url`
+// quietly become `undefined` instead of a parse error.
+function stripImportMeta({ types: t }) {
+  return {
+    name: 'strip-import-meta',
+    visitor: {
+      MetaProperty(nodePath) {
+        const node = nodePath.node;
+        if (
+          t.isIdentifier(node.meta, { name: 'import' }) &&
+          t.isIdentifier(node.property, { name: 'meta' })
+        ) {
+          nodePath.replaceWith(t.objectExpression([]));
+        }
+      },
+    },
+  };
+}
+
 module.exports = function (api) {
   api.cache(true);
 
   return {
     presets: ['babel-preset-expo'],
-    plugins: [inlineExpoRouterEnv],
+    plugins: [inlineExpoRouterEnv, stripImportMeta],
   };
 };

@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Input } from '@/components/ui/Input';
@@ -7,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { theme } from '@/constants/theme';
 import { extractApiError, useLoginMutation } from '@/services/queries/auth.queries';
+import { tap, warn } from '@/lib/feedback';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -20,19 +29,31 @@ export default function LoginScreen() {
 
   const handleLogin = () => {
     if (!canSubmit) return;
+    tap();
     setError(null);
     login(
       { email: email.trim(), password },
       {
         onSuccess: () => router.replace('/(tabs)/home'),
-        onError: (err) => setError(extractApiError(err, 'Invalid email or password')),
+        onError: (err) => {
+          warn();
+          setError(extractApiError(err, 'Invalid email or password'));
+        },
       }
     );
   };
 
   return (
     <ScreenContainer padded style={styles.container}>
-      <View style={{ flex: 1, justifyContent: 'center' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
 
         {/* Header / Avatar */}
         <View style={styles.header}>
@@ -89,7 +110,8 @@ export default function LoginScreen() {
           isLoading={isPending}
           disabled={!canSubmit}
         />
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Footer */}
       <View style={styles.footer}>

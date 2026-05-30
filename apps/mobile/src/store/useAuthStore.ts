@@ -33,7 +33,12 @@ export const useAuthStore = create<AuthState>()(
       name: 'cinematch-auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ token: state.token, user: state.user }),
-      onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
+      // When there's no persisted data (first run / fresh browser), the
+      // rehydrate callback gets `state = undefined`. Use the live store
+      // instead so the gate always flips.
+      onRehydrateStorage: () => () => {
+        useAuthStore.getState().setHasHydrated(true);
+      },
     }
   )
 );

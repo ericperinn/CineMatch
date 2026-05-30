@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { theme } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useProfileStatus, useSyncProfile } from '@/services/queries/profile.queries';
+import { socketService } from '@/services/socket';
+import { copyToClipboard, success, tap } from '@/lib/feedback';
 
 const SYNCING_STATES = ['waiting', 'active', 'delayed'];
 
@@ -14,6 +16,15 @@ export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
+  const [copiedId, setCopiedId] = useState(false);
+
+  const copyUserId = async () => {
+    if (!user?.id) return;
+    await copyToClipboard(user.id);
+    await success();
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 1500);
+  };
 
   const hasLetterboxd = !!user?.letterboxdUsername;
   const { data: status } = useProfileStatus(hasLetterboxd);
@@ -23,8 +34,15 @@ export default function ProfileScreen() {
   const isJobRunning = !!syncState && SYNCING_STATES.includes(syncState);
 
   const handleLogout = () => {
+    tap();
+    socketService.disconnect();
     logout();
     router.replace('/(auth)/login');
+  };
+
+  const handleSync = () => {
+    tap();
+    sync();
   };
 
   const lastSynced = status?.lastSyncedAt
@@ -38,6 +56,22 @@ export default function ProfileScreen() {
           <Avatar name={user?.name || 'User'} size={72} ring ringColor={theme.colors.primary} />
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTag}>YOUR ID</Text>
+          <Text style={styles.idValue} selectable numberOfLines={1}>
+            {user?.id}
+          </Text>
+          <Text style={styles.meta}>
+            Share this with a friend so they can send you a friend request.
+          </Text>
+          <Button
+            label={copiedId ? 'Copied!' : 'Copy ID'}
+            variant={copiedId ? 'secondary' : 'primary'}
+            onPress={copyUserId}
+            style={{ marginTop: theme.spacing.md }}
+          />
         </View>
 
         <View style={styles.card}>
@@ -59,7 +93,7 @@ export default function ProfileScreen() {
               <Button
                 label={isJobRunning ? 'Syncing…' : 'Sync now'}
                 variant="secondary"
-                onPress={() => sync()}
+                onPress={handleSync}
                 isLoading={isSyncing}
                 disabled={isJobRunning}
                 style={{ marginTop: theme.spacing.md }}
@@ -127,6 +161,12 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.sans,
     fontWeight: '700',
     fontSize: 18,
+    color: theme.colors.text,
+    marginTop: 6,
+  },
+  idValue: {
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: 13,
     color: theme.colors.text,
     marginTop: 6,
   },
