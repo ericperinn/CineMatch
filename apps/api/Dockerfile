@@ -45,6 +45,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
+  CMD node -e "const http = require('http'); http.get('http://localhost:3000/health', r => { if (r.statusCode === 200) process.exit(0); else process.exit(1); }).on('error', () => process.exit(1));"
 
 CMD ["node", "apps/api/dist/main.js"]

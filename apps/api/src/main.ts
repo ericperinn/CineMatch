@@ -1,10 +1,19 @@
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import { WsAdapter } from "@nestjs/platform-ws";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // MatchGateway runs on the native `ws` server (not socket.io), so the
+  // ws adapter must be registered for its handlers to receive messages.
+  app.useWebSocketAdapter(new WsAdapter(app));
+
+  // Dev-friendly CORS: allow the Expo web bundle (and any local dev origin)
+  // to call the REST API. Tighten this before production.
+  app.enableCors({ origin: true, credentials: true });
 
   app.setGlobalPrefix("api/v1", { exclude: ["health"] });
 

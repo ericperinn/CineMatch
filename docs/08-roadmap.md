@@ -49,15 +49,15 @@ Estrutura de pastas, docs, Docker, regras pra agentes. **Nenhum código de aplic
 - [ ] Index HNSW criado e validado por benchmark
 
 ## Fase 6 — WebSocket Gateway + match
-- [ ] Gateway `/match` namespace
-- [ ] Eventos: create, join, leave, swipe, batch, match, completed
-- [ ] Compute taste vector on-the-fly
-- [ ] kNN query no pgvector
-- [ ] Lógica de pódio (3 matches)
-- [ ] Cooldown de dislike
-- [ ] Modo Descoberta funcional
-- [ ] Modo Limpa-Fila funcional
-- [ ] Idle timeout + disconnect grace
+- [x] Gateway `/match` namespace
+- [x] Eventos: create, join, leave, swipe, batch, match, completed
+- [x] Compute taste vector on-the-fly
+- [x] kNN query no pgvector
+- [x] Lógica de pódio (3 matches)
+- [x] Cooldown de dislike
+- [x] Modo Descoberta funcional
+- [x] Modo Limpa-Fila funcional
+- [x] Idle timeout + disconnect grace
 
 ## Fase 7 — JustWatch + Premium gating
 - [ ] Integração JustWatch (cliente HTTP)

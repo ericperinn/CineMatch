@@ -8,6 +8,8 @@ import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfileModule } from "./profile/profile.module";
 import { UsersModule } from "./users/users.module";
+import { MatchModule } from "./match/match.module";
+import { SessionsModule } from "./sessions/sessions.module";
 
 @Module({
   imports: [
@@ -17,8 +19,9 @@ import { UsersModule } from "./users/users.module";
       ignoreEnvFile: process.env.NODE_ENV === "production",
     }),
     ThrottlerModule.forRoot([
-      // Default: 60 requests per minute per IP, globally.
-      { name: "default", ttl: 60_000, limit: 60 },
+      // Default: 300 req/min per IP. Generous for dev with mobile polling
+      // (friends/pending every 15s) and multi-device testing.
+      { name: "default", ttl: 60_000, limit: 300 },
       // Strict bucket — opt-in per endpoint with @Throttle({ strict: ... })
       { name: "strict", ttl: 60_000, limit: 5 },
     ]),
@@ -28,6 +31,8 @@ import { UsersModule } from "./users/users.module";
     UsersModule,
     FriendsModule,
     ProfileModule,
+    MatchModule,
+    SessionsModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

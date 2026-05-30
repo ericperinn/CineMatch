@@ -122,7 +122,7 @@ export class SyncProfileProcessor {
     await Promise.all(tasteOps);
 
     // Enqueue metadata discovery for movies that don't have metadata yet
-    await this.enqueueMetadataForStubs(Array.from(movieIds));
+    await this.enqueueDiscoverJobs(Array.from(movieIds));
 
     return {
       diaryCount: highRatedDiary.length,
@@ -161,22 +161,24 @@ export class SyncProfileProcessor {
     return new Set(tmdbIds);
   }
 
-  private async enqueueMetadataForStubs(tmdbIds: string[]): Promise<void> {
-    const stubs = await this.prisma.movie.findMany({
+  private async enqueueDiscoverJobs(tmdbIds: string[]): Promise<void> {
+    if (tmdbIds.length === 0) return;
+
+    const needsWork = await this.prisma.movie.findMany({
       where: {
         id: { in: tmdbIds },
-        OR: [{ title: { startsWith: "[pending]" } }, { year: 0 }],
+        OR: [
+          { title: { startsWith: "[pending]" } },
+          { year: 0 },
+          { embeddingUpdatedAt: null },
+        ],
       },
       select: { id: true },
     });
 
-    for (const stub of stubs) {
-      // No fixed jobId here: discover may be re-queued legitimately
-      // (e.g. TMDB key was missing on a previous run and is now set, or the
-      // stub was hydrated with bad data and we want a fresh pull).
-      // The processor short-circuits if the row is already hydrated.
+    for (const movie of needsWork) {
       await this.discoverMovieQueue.add(
-        { tmdbId: stub.id },
+        { tmdbId: movie.id },
         { removeOnComplete: 100, removeOnFail: 50, attempts: 3 },
       );
     }

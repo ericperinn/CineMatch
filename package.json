@@ -11,6 +11,7 @@
   "workspaces": [
     "apps/api",
     "apps/worker",
-    "packages/database"
+    "packages/database",
+    "apps/mobile"
   ]
 }
