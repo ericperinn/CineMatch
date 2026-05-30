@@ -73,6 +73,9 @@ module.exports = function (api) {
 
   return {
     presets: ['babel-preset-expo'],
-    plugins: [inlineExpoRouterEnv, stripImportMeta],
+    // `react-native-worklets/plugin` MUST be the last plugin in the array
+    // (Reanimated v4 requirement). It compiles `'worklet'` directives into
+    // the worklet runtime that drives gesture-handler animations.
+    plugins: [inlineExpoRouterEnv, stripImportMeta, 'react-native-worklets/plugin'],
   };
 };
