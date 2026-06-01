@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Avatar } from '@/components/ui/Avatar';
 import { theme } from '@/constants/theme';
@@ -59,17 +60,24 @@ export default function HistoryScreen() {
               colors={[theme.colors.primary]}
             />
           }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>No sessions yet</Text>
-              <Text style={styles.emptyBody}>
-                Start swiping with a friend to fill your history.
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState />}
         />
       )}
     </ScreenContainer>
+  );
+}
+
+function EmptyState() {
+  return (
+    <View style={styles.empty}>
+      <View style={styles.emptyMark}>
+        <Ionicons name="film-outline" size={32} color={theme.colors.textSubtle} />
+      </View>
+      <Text style={styles.emptyTitle}>No sessions yet</Text>
+      <Text style={styles.emptyBody}>
+        Start swiping with a friend on the Home tab — your podiums will land here.
+      </Text>
+    </View>
   );
 }
 
@@ -78,52 +86,97 @@ function SessionRow({ entry }: { entry: SessionHistoryEntry }) {
   return (
     <View style={styles.row}>
       <View style={styles.rowHeader}>
-        <Avatar name={entry.partner.name} size={36} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.partnerName}>{entry.partner.name}</Text>
-          <Text style={styles.meta}>
-            {entry.role === 'host' ? 'You invited' : 'Invited you'} ·{' '}
-            {formatDate(entry.finishedAt ?? entry.createdAt)}
-          </Text>
+        <Avatar name={entry.partner.name} size={44} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={styles.partnerName} numberOfLines={1}>{entry.partner.name}</Text>
+          <View style={styles.metaRow}>
+            <Ionicons
+              name={entry.role === 'host' ? 'paper-plane' : 'mail-open-outline'}
+              size={11}
+              color={theme.colors.textSubtle}
+            />
+            <Text style={styles.meta}>
+              {entry.role === 'host' ? 'You invited' : 'Invited you'} ·{' '}
+              {formatDate(entry.finishedAt ?? entry.createdAt)}
+            </Text>
+          </View>
         </View>
-        <Text style={[styles.badge, completed ? styles.badgeOk : styles.badgeMuted]}>
-          {completed ? 'COMPLETED' : 'ABANDONED'}
-        </Text>
+        <StatusBadge completed={completed} mode={entry.mode} />
       </View>
 
       {completed && entry.podium.length > 0 ? (
         <View style={styles.posterStrip}>
-          {entry.podium.slice(0, 3).map((movie) => (
-            <PosterThumb key={movie.id} movie={movie} />
+          {entry.podium.slice(0, 3).map((movie, i) => (
+            <PosterThumb key={movie.id} movie={movie} rank={i + 1} />
           ))}
         </View>
       ) : completed ? (
-        <Text style={styles.metaItalic}>Completed without a podium.</Text>
+        <InlineNote icon="trophy-outline" text="Completed without a podium." />
       ) : (
-        <Text style={styles.metaItalic}>You ended this session early.</Text>
+        <InlineNote icon="exit-outline" text="You ended this session early." />
       )}
     </View>
   );
 }
 
-function PosterThumb({ movie }: { movie: SessionHistoryMovie }) {
+function StatusBadge({ completed, mode }: { completed: boolean; mode: string }) {
+  if (completed) {
+    return (
+      <View style={[styles.badge, styles.badgeOk]}>
+        <Ionicons name="trophy" size={11} color={theme.colors.primaryDark} />
+        <Text style={[styles.badgeText, { color: theme.colors.primaryDark }]}>
+          {mode === 'WATCHLIST' ? 'WATCHLIST' : 'PODIUM'}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.badge, styles.badgeMuted]}>
+      <Ionicons name="close-circle" size={11} color={theme.colors.textMuted} />
+      <Text style={[styles.badgeText, { color: theme.colors.textMuted }]}>ENDED</Text>
+    </View>
+  );
+}
+
+function InlineNote({
+  icon,
+  text,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  text: string;
+}) {
+  return (
+    <View style={styles.noteRow}>
+      <Ionicons name={icon} size={14} color={theme.colors.textSubtle} />
+      <Text style={styles.note}>{text}</Text>
+    </View>
+  );
+}
+
+function PosterThumb({ movie, rank }: { movie: SessionHistoryMovie; rank: number }) {
   const uri = posterUri(movie.posterPath);
   return (
     <View style={styles.thumb}>
-      {uri ? (
-        <Image
-          source={{ uri }}
-          style={styles.thumbImg}
-          contentFit="cover"
-          transition={200}
-          placeholder={{ blurhash: POSTER_BLURHASH }}
-          placeholderContentFit="cover"
-          cachePolicy="memory-disk"
-        />
-      ) : (
-        <View style={[styles.thumbImg, styles.thumbPlaceholder]} />
-      )}
+      <View style={styles.thumbImgWrap}>
+        {uri ? (
+          <Image
+            source={{ uri }}
+            style={styles.thumbImg}
+            contentFit="cover"
+            transition={200}
+            placeholder={{ blurhash: POSTER_BLURHASH }}
+            placeholderContentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <View style={[styles.thumbImg, styles.thumbPlaceholder]} />
+        )}
+        <View style={styles.rankBadge}>
+          <Text style={styles.rankText}>{rank}</Text>
+        </View>
+      </View>
       <Text style={styles.thumbTitle} numberOfLines={2}>{movie.title}</Text>
+      {movie.year ? <Text style={styles.thumbYear}>{movie.year}</Text> : null}
     </View>
   );
 }
@@ -136,15 +189,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: '800',
-    fontSize: 28,
+    fontWeight: '900',
+    fontSize: 32,
     color: theme.colors.text,
+    letterSpacing: -1,
   },
   subtitle: {
     fontFamily: theme.typography.fontFamily.mono,
     fontSize: 10,
     color: theme.colors.textSubtle,
-    letterSpacing: 1.5,
+    letterSpacing: 1.8,
     marginTop: 4,
   },
   center: {
@@ -154,7 +208,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: 140,
     flexGrow: 1,
   },
   row: {
@@ -171,51 +225,70 @@ const styles = StyleSheet.create({
   },
   partnerName: {
     fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 16,
     color: theme.colors.text,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   meta: {
     fontFamily: theme.typography.fontFamily.mono,
     fontSize: 10,
     color: theme.colors.textSubtle,
     letterSpacing: 1.2,
-    marginTop: 2,
   },
-  metaItalic: {
+
+  // Status badge
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: theme.radii.full,
+  },
+  badgeOk: {
+    backgroundColor: theme.colors.primary,
+  },
+  badgeMuted: {
+    backgroundColor: theme.colors.surfaceHighlight,
+  },
+  badgeText: {
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    fontWeight: '800',
+  },
+
+  // Inline note (e.g., abandoned, no podium)
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: theme.spacing.md,
+  },
+  note: {
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 13,
     fontStyle: 'italic',
     color: theme.colors.textMuted,
-    marginTop: theme.spacing.md,
   },
-  badge: {
-    fontFamily: theme.typography.fontFamily.mono,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.radii.sm,
-    overflow: 'hidden',
-  },
-  badgeOk: {
-    color: theme.colors.primaryDark,
-    backgroundColor: theme.colors.primary,
-  },
-  badgeMuted: {
-    color: theme.colors.textMuted,
-    backgroundColor: theme.colors.surfaceHighlight,
-  },
+
+  // Poster strip
   posterStrip: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.lg,
   },
   thumb: {
     flex: 1,
-    maxWidth: '33%',
     gap: 6,
+  },
+  thumbImgWrap: {
+    position: 'relative',
   },
   thumbImg: {
     width: '100%',
@@ -226,17 +299,54 @@ const styles = StyleSheet.create({
   thumbPlaceholder: {
     backgroundColor: theme.colors.surfaceHighlight,
   },
+  rankBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankText: {
+    fontFamily: theme.typography.fontFamily.mono,
+    fontWeight: '900',
+    fontSize: 11,
+    color: theme.colors.primaryDark,
+  },
   thumbTitle: {
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.text,
+    lineHeight: 14,
   },
+  thumbYear: {
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: 9,
+    color: theme.colors.textSubtle,
+    letterSpacing: 1.2,
+  },
+
+  // Empty
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: theme.spacing.xxl * 2,
     paddingHorizontal: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  emptyMark: {
+    width: 72,
+    height: 72,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.surfaceHighlight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.md,
   },
   emptyTitle: {
     fontFamily: theme.typography.fontFamily.sans,
@@ -248,7 +358,8 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 14,
     color: theme.colors.textMuted,
-    marginTop: theme.spacing.sm,
     textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 20,
   },
 });
