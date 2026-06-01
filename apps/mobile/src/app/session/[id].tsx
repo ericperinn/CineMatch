@@ -298,16 +298,14 @@ export default function SessionScreen() {
 
       <View style={styles.cardArea}>
         {next ? (
-          <View style={styles.cardBehind} pointerEvents="none">
+          <View style={[styles.cardSlot, styles.cardBehind]} pointerEvents="none">
             <StaticCard movie={next} />
           </View>
         ) : null}
 
-        <SwipeableCard
-          movie={current}
-          onSwipe={swipe}
-          onInfo={() => setDetailFor(current)}
-        />
+        <View style={styles.cardSlot}>
+          <SwipeableCard movie={current} onSwipe={swipe} />
+        </View>
       </View>
 
       <View style={styles.actions}>
@@ -416,10 +414,10 @@ function ActionButton({
   );
 }
 
-function StaticCard({ movie }: { movie: Movie }) {
+function CardBody({ movie, compact }: { movie: Movie; compact?: boolean }) {
   const uri = posterUri(movie.posterPath);
   return (
-    <View style={styles.card}>
+    <>
       {uri ? (
         <Image
           source={{ uri }}
@@ -436,9 +434,27 @@ function StaticCard({ movie }: { movie: Movie }) {
         </View>
       )}
       <View style={styles.cardCaption}>
-        <Text style={styles.cardTitle} numberOfLines={1}>{movie.title}</Text>
+        <Text style={styles.cardTitle} numberOfLines={2}>{movie.title}</Text>
         {movie.year ? <Text style={styles.cardYear}>{movie.year}</Text> : null}
+        {!compact && movie.overview ? (
+          <Text style={styles.cardOverview} numberOfLines={3}>
+            {movie.overview}
+          </Text>
+        ) : null}
+        {!compact && !movie.overview ? (
+          <Text style={[styles.cardOverview, { fontStyle: 'italic' }]}>
+            No description available.
+          </Text>
+        ) : null}
       </View>
+    </>
+  );
+}
+
+function StaticCard({ movie }: { movie: Movie }) {
+  return (
+    <View style={styles.card}>
+      <CardBody movie={movie} compact />
     </View>
   );
 }
@@ -446,11 +462,9 @@ function StaticCard({ movie }: { movie: Movie }) {
 function SwipeableCard({
   movie,
   onSwipe,
-  onInfo,
 }: {
   movie: Movie;
   onSwipe: (vote: 'LIKE' | 'DISLIKE') => void;
-  onInfo: () => void;
 }) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -495,50 +509,10 @@ function SwipeableCard({
     opacity: Math.min(1, Math.max(0, -translateX.value / 100)),
   }));
 
-  const uri = posterUri(movie.posterPath);
-
   return (
     <GestureDetector gesture={pan}>
       <Animated.View style={[styles.card, cardStyle]}>
-        {uri ? (
-          <Image
-            source={{ uri }}
-            style={styles.poster}
-            contentFit="cover"
-            transition={250}
-            placeholder={{ blurhash: POSTER_BLURHASH }}
-            placeholderContentFit="cover"
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View style={[styles.poster, styles.posterPlaceholder]}>
-            <Text style={styles.posterPlaceholderText}>NO POSTER</Text>
-          </View>
-        )}
-
-        <View style={styles.cardCaption}>
-          <View style={styles.cardTitleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle} numberOfLines={2}>{movie.title}</Text>
-              {movie.year ? <Text style={styles.cardYear}>{movie.year}</Text> : null}
-            </View>
-            <TouchableOpacity
-              onPress={onInfo}
-              hitSlop={10}
-              accessibilityLabel="More info"
-              style={styles.infoBtn}
-            >
-              <Ionicons name="information-circle-outline" size={22} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-          {movie.overview ? (
-            <Text style={styles.cardOverview} numberOfLines={4}>{movie.overview}</Text>
-          ) : (
-            <Text style={[styles.cardOverview, { fontStyle: 'italic' }]}>
-              No description available.
-            </Text>
-          )}
-        </View>
+        <CardBody movie={movie} />
 
         <Animated.View style={[styles.overlayBadge, styles.overlayLike, likeOpacity]} pointerEvents="none">
           <Ionicons name="heart" size={28} color={theme.colors.primary} />
@@ -596,50 +570,58 @@ function MatchBanner({ event }: { event: MatchEvent }) {
 }
 
 function MovieDetailModal({ movie, onClose }: { movie: Movie | null; onClose: () => void }) {
+  // animationType="none" so React Native doesn't add its own fade on top of
+  // the Reanimated entering animations — which was making the sheet "jump".
   return (
     <Modal
       visible={!!movie}
       onRequestClose={onClose}
-      animationType="fade"
+      animationType="none"
       transparent
       statusBarTranslucent
     >
-      <Pressable style={styles.modalBackdrop} onPress={onClose} />
       {movie && (
-        <Animated.View
-          entering={SlideInDown.springify().damping(18)}
-          exiting={SlideOutDown.duration(220)}
-          style={styles.modalSheet}
-        >
-          <View style={styles.modalHandle} />
-          <ScrollView
-            contentContainerStyle={styles.modalScroll}
-            showsVerticalScrollIndicator={false}
+        <View style={StyleSheet.absoluteFill}>
+          <Animated.View
+            entering={FadeIn.duration(180)}
+            style={styles.modalBackdrop}
           >
-            <View style={styles.modalHeader}>
-              <PosterThumb movie={movie} size={120} />
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={styles.modalTitle} numberOfLines={3}>{movie.title}</Text>
-                {movie.year ? (
-                  <View style={styles.modalChipRow}>
-                    <View style={styles.modalChip}>
-                      <Ionicons name="calendar-outline" size={12} color={theme.colors.primary} />
-                      <Text style={styles.modalChipText}>{movie.year}</Text>
+            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          </Animated.View>
+          <Animated.View
+            entering={SlideInDown.springify().damping(20).mass(0.6)}
+            style={styles.modalSheet}
+          >
+            <View style={styles.modalHandle} />
+            <ScrollView
+              contentContainerStyle={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalHeader}>
+                <PosterThumb movie={movie} size={120} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Text style={styles.modalTitle} numberOfLines={3}>{movie.title}</Text>
+                  {movie.year ? (
+                    <View style={styles.modalChipRow}>
+                      <View style={styles.modalChip}>
+                        <Ionicons name="calendar-outline" size={12} color={theme.colors.primary} />
+                        <Text style={styles.modalChipText}>{movie.year}</Text>
+                      </View>
                     </View>
-                  </View>
-                ) : null}
+                  ) : null}
+                </View>
+                <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityLabel="Close">
+                  <Ionicons name="close" size={26} color={theme.colors.textMuted} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityLabel="Close">
-                <Ionicons name="close" size={26} color={theme.colors.textMuted} />
-              </TouchableOpacity>
-            </View>
 
-            <Text style={styles.modalSectionTag}>SYNOPSIS</Text>
-            <Text style={styles.modalOverview}>
-              {movie.overview?.trim() || 'No description available for this title.'}
-            </Text>
-          </ScrollView>
-        </Animated.View>
+              <Text style={styles.modalSectionTag}>SYNOPSIS</Text>
+              <Text style={styles.modalOverview}>
+                {movie.overview?.trim() || 'No description available for this title.'}
+              </Text>
+            </ScrollView>
+          </Animated.View>
+        </View>
       )}
     </Modal>
   );
@@ -694,31 +676,42 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // Card area
+  // Card area — relative container that both cards (current + next) overlay
   cardArea: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+    position: 'relative',
+  },
+  // Each card slot is absolute-positioned so current and next stack perfectly.
+  cardSlot: {
+    position: 'absolute',
+    top: theme.spacing.sm,
+    bottom: theme.spacing.sm,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    alignItems: 'center',
   },
   cardBehind: {
-    position: 'absolute',
-    width: '100%',
-    paddingHorizontal: theme.spacing.lg,
     transform: [{ scale: 0.96 }, { translateY: -14 }],
-    opacity: 0.55,
+    opacity: 0.5,
   },
   card: {
     width: '100%',
+    maxWidth: 420,
+    flex: 1,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: 'hidden',
   },
+  // Poster takes the remaining space inside the card after the caption is laid
+  // out. No aspect ratio so the card never overflows the slot.
   poster: {
     width: '100%',
-    aspectRatio: 2 / 3,
+    flex: 1,
     backgroundColor: theme.colors.surfaceHighlight,
   },
   posterPlaceholder: {
@@ -732,18 +725,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   cardCaption: {
-    padding: theme.spacing.lg,
-    gap: 4,
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+    gap: 2,
   },
   cardTitle: {
     fontFamily: theme.typography.fontFamily.sans,
     fontWeight: '800',
-    fontSize: 22,
+    fontSize: 20,
     color: theme.colors.text,
     letterSpacing: -0.3,
   },
@@ -758,15 +746,8 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 13,
     color: theme.colors.textMuted,
-    marginTop: theme.spacing.md,
-    lineHeight: 19,
-  },
-  infoBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.full,
+    marginTop: theme.spacing.sm,
+    lineHeight: 18,
   },
 
   // Swipe overlays
