@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Avatar } from '@/components/ui/Avatar';
@@ -53,29 +54,38 @@ export default function ProfileScreen() {
     <ScreenContainer padded={false}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Avatar name={user?.name || 'User'} size={72} ring ringColor={theme.colors.primary} />
+          <Avatar name={user?.name || 'User'} size={80} ring ringColor={theme.colors.primary} />
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTag}>YOUR ID</Text>
-          <Text style={styles.idValue} selectable numberOfLines={1}>
-            {user?.id}
-          </Text>
+          <SectionHeader icon="people-outline" label="FRIEND CODE" />
+          <View style={styles.codeToken}>
+            <Text style={styles.codeValue} selectable numberOfLines={1}>
+              {user?.id ?? ''}
+            </Text>
+          </View>
           <Text style={styles.meta}>
-            Share this with a friend so they can send you a friend request.
+            Friends can paste this to add you — or just search your email.
           </Text>
           <Button
-            label={copiedId ? 'Copied!' : 'Copy ID'}
+            label={copiedId ? 'Copied!' : 'Copy code'}
             variant={copiedId ? 'secondary' : 'primary'}
             onPress={copyUserId}
+            leftIcon={
+              <Ionicons
+                name={copiedId ? 'checkmark' : 'copy-outline'}
+                size={18}
+                color={copiedId ? theme.colors.text : theme.colors.primaryDark}
+              />
+            }
             style={{ marginTop: theme.spacing.md }}
           />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTag}>LETTERBOXD</Text>
+          <SectionHeader icon="film-outline" label="LETTERBOXD" />
           {hasLetterboxd ? (
             <>
               <Text style={styles.cardValue}>@{user?.letterboxdUsername}</Text>
@@ -84,9 +94,9 @@ export default function ProfileScreen() {
                 <Stat label="WATCHLIST" value={status?.watchlistCount ?? 0} />
                 <Stat label="FAVORITES" value={status?.tasteByFavorites ?? 0} />
               </View>
-              <Text style={styles.meta}>Last synced: {lastSynced}</Text>
+              <Text style={styles.meta}>Last synced · {lastSynced}</Text>
               {isJobRunning && (
-                <Text style={[styles.meta, { color: theme.colors.primary }]}>
+                <Text style={[styles.meta, { color: theme.colors.primary, marginTop: 4 }]}>
                   Sync in progress ({syncState})…
                 </Text>
               )}
@@ -101,14 +111,37 @@ export default function ProfileScreen() {
             </>
           ) : (
             <Text style={styles.meta}>
-              No Letterboxd account connected. Add your username on sign-up to import your taste.
+              No Letterboxd account connected. Add your username on sign-up to import
+              your taste.
             </Text>
           )}
         </View>
 
-        <Button label="Log out" variant="outline" onPress={handleLogout} />
+        <Button
+          label="Log out"
+          variant="outline"
+          onPress={handleLogout}
+          leftIcon={
+            <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
+          }
+        />
       </ScrollView>
     </ScreenContainer>
+  );
+}
+
+function SectionHeader({
+  icon,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Ionicons name={icon} size={14} color={theme.colors.primary} />
+      <Text style={styles.cardTag}>{label}</Text>
+    </View>
   );
 }
 
@@ -125,18 +158,21 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xxl,
-    paddingBottom: 120,
+    paddingBottom: 140,
     gap: theme.spacing.lg,
   },
   header: {
     alignItems: 'center',
     gap: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
   },
   name: {
     fontFamily: theme.typography.fontFamily.sans,
     fontWeight: '800',
-    fontSize: 22,
+    fontSize: 24,
     color: theme.colors.text,
+    letterSpacing: -0.5,
+    marginTop: theme.spacing.sm,
   },
   email: {
     fontFamily: theme.typography.fontFamily.sans,
@@ -150,6 +186,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: theme.spacing.md,
+  },
   cardTag: {
     fontFamily: theme.typography.fontFamily.mono,
     fontSize: 10,
@@ -162,17 +204,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 18,
     color: theme.colors.text,
-    marginTop: 6,
   },
-  idValue: {
+  codeToken: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  codeValue: {
     fontFamily: theme.typography.fontFamily.mono,
     fontSize: 13,
     color: theme.colors.text,
-    marginTop: 6,
+    letterSpacing: 0.5,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.lg,
+    gap: theme.spacing.xl,
     marginTop: theme.spacing.md,
   },
   stat: {
@@ -181,7 +230,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontFamily: theme.typography.fontFamily.sans,
     fontWeight: '800',
-    fontSize: 20,
+    fontSize: 22,
     color: theme.colors.text,
   },
   statLabel: {
@@ -196,5 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textMuted,
     marginTop: theme.spacing.md,
+    lineHeight: 18,
   },
 });

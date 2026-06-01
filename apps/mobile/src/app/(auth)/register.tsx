@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Input } from '@/components/ui/Input';
@@ -46,53 +54,67 @@ export default function RegisterScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <Text style={styles.title}>Create account</Text>
-            <Text style={styles.subtitle}>START MATCHING TONIGHT</Text>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.hero}>
+            <View style={styles.logoMark}>
+              <Ionicons name="film" size={24} color={theme.colors.primaryDark} />
+            </View>
+            <Text style={styles.brand}>Create your account</Text>
+            <Text style={styles.tagline}>
+              Sync a Letterboxd profile to seed your matches with your taste.
+            </Text>
           </View>
 
-          <Input
-            label="Name"
-            value={name}
-            onChangeText={setName}
-            placeholder="Your name"
-            autoCapitalize="words"
-          />
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@email.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="At least 8 characters"
-            secureTextEntry
-          />
-          <Input
-            label="Letterboxd username (optional)"
-            value={letterboxdUsername}
-            onChangeText={setLetterboxdUsername}
-            placeholder="username"
-            autoCapitalize="none"
-            onSubmitEditing={handleRegister}
-          />
+          <View style={styles.form}>
+            <Text style={styles.eyebrow}>NEW ACCOUNT</Text>
 
-          {error && <Text style={styles.error}>{error}</Text>}
+            <Input
+              label="Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="Your name"
+              autoCapitalize="words"
+            />
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+            <Input
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="At least 8 characters"
+              secureTextEntry
+            />
+            <Input
+              label="Letterboxd username (optional)"
+              value={letterboxdUsername}
+              onChangeText={setLetterboxdUsername}
+              placeholder="e.g. davecinema"
+              autoCapitalize="none"
+              autoCorrect={false}
+              onSubmitEditing={handleRegister}
+            />
 
-          <Button
-            label="Create account"
-            onPress={handleRegister}
-            isLoading={isPending}
-            disabled={!canSubmit}
-            style={{ marginTop: theme.spacing.sm }}
-          />
+            {error && <Text style={styles.error}>{error}</Text>}
+
+            <Button
+              label="Create account"
+              onPress={handleRegister}
+              isLoading={isPending}
+              disabled={!canSubmit}
+              style={{ marginTop: theme.spacing.sm }}
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -100,7 +122,7 @@ export default function RegisterScreen() {
         <Text style={styles.footerText}>
           Already have an account?{' '}
           <Text style={styles.footerLink} onPress={() => router.back()}>
-            Log in
+            Sign in
           </Text>
         </Text>
       </View>
@@ -115,29 +137,53 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
+    gap: theme.spacing.lg,
   },
-  header: {
-    marginBottom: theme.spacing.xl,
+  hero: {
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
   },
-  title: {
+  logoMark: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brand: {
     fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: '800',
-    fontSize: 26,
+    fontWeight: '900',
+    fontSize: 28,
     color: theme.colors.text,
     letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  subtitle: {
+  tagline: {
+    fontFamily: theme.typography.fontFamily.sans,
+    fontSize: 14,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    maxWidth: 300,
+    lineHeight: 20,
+  },
+  form: {
+    gap: theme.spacing.xs,
+  },
+  eyebrow: {
     fontFamily: theme.typography.fontFamily.mono,
     fontSize: 10,
     color: theme.colors.textSubtle,
-    letterSpacing: 1.2,
-    marginTop: 4,
+    letterSpacing: 2,
+    fontWeight: '700',
+    marginBottom: theme.spacing.sm,
   },
   error: {
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 13,
     color: theme.colors.error,
-    marginBottom: theme.spacing.md,
+    marginVertical: theme.spacing.sm,
     textAlign: 'center',
   },
   footer: {
@@ -147,7 +193,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontFamily: theme.typography.fontFamily.sans,
-    fontSize: 13,
+    fontSize: 14,
     color: theme.colors.textMuted,
   },
   footerLink: {

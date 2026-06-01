@@ -5,14 +5,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Avatar } from '@/components/ui/Avatar';
 import { theme } from '@/constants/theme';
 import { extractApiError, useLoginMutation } from '@/services/queries/auth.queries';
 import { tap, warn } from '@/lib/feedback';
@@ -50,70 +49,54 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-
-        {/* Header / Avatar */}
-        <View style={styles.header}>
-          <Avatar name="CineMatch" size={56} ring ringColor={theme.colors.primary} />
-          <View>
-            <Text style={styles.title}>Welcome back.</Text>
-            <Text style={styles.subtitle}>FIND YOUR NEXT WATCH</Text>
+          <View style={styles.hero}>
+            <View style={styles.logoMark}>
+              <Ionicons name="film" size={28} color={theme.colors.primaryDark} />
+            </View>
+            <Text style={styles.brand}>CineMatch</Text>
+            <Text style={styles.tagline}>
+              Pick what to watch tonight — together.
+            </Text>
           </View>
-        </View>
 
-        {/* Social Button Placeholder */}
-        <Button
-          label="Continue with Letterboxd"
-          variant="secondary"
-          disabled
-          style={{ marginBottom: 18 }}
-        />
+          <View style={styles.form}>
+            <Text style={styles.eyebrow}>SIGN IN</Text>
 
-        {/* Divider */}
-        <View style={styles.dividerContainer}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.dividerLine} />
-        </View>
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+            <Input
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••"
+              secureTextEntry
+              onSubmitEditing={handleLogin}
+            />
 
-        {/* Form */}
-        <Input
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@email.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-        />
-        <Input
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          secureTextEntry
-          onSubmitEditing={handleLogin}
-        />
+            {error && <Text style={styles.error}>{error}</Text>}
 
-        <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-        </TouchableOpacity>
-
-        {error && <Text style={styles.error}>{error}</Text>}
-
-        <Button
-          label="Log in"
-          onPress={handleLogin}
-          isLoading={isPending}
-          disabled={!canSubmit}
-        />
+            <Button
+              label="Sign in"
+              onPress={handleLogin}
+              isLoading={isPending}
+              disabled={!canSubmit}
+              style={{ marginTop: theme.spacing.sm }}
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           New here?{' '}
@@ -121,7 +104,6 @@ export default function LoginScreen() {
             Create an account
           </Text>
         </Text>
-        <Text style={styles.securedText}>SECURED · OAUTH 2.0</Text>
       </View>
     </ScreenContainer>
   );
@@ -129,82 +111,76 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: theme.spacing.xxl,
+    paddingTop: theme.spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    gap: theme.spacing.xl,
+  },
+  hero: {
     alignItems: 'center',
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
   },
-  title: {
+  logoMark: {
+    width: 64,
+    height: 64,
+    borderRadius: theme.radii.xl,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  brand: {
     fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: '800',
-    fontSize: 26,
+    fontWeight: '900',
+    fontSize: 36,
     color: theme.colors.text,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
-  subtitle: {
+  tagline: {
+    fontFamily: theme.typography.fontFamily.sans,
+    fontSize: 15,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 22,
+  },
+  form: {
+    gap: theme.spacing.xs,
+  },
+  eyebrow: {
     fontFamily: theme.typography.fontFamily.mono,
     fontSize: 10,
     color: theme.colors.textSubtle,
-    letterSpacing: 1.2,
-    marginTop: 4,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginVertical: 18,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  dividerText: {
-    fontFamily: theme.typography.fontFamily.mono,
-    fontSize: 9,
-    color: theme.colors.textSubtle,
-    letterSpacing: 1.8,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: theme.spacing.lg,
-    marginTop: -4,
-  },
-  forgotPasswordText: {
-    fontFamily: theme.typography.fontFamily.sans,
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
+    letterSpacing: 2,
+    fontWeight: '700',
+    marginBottom: theme.spacing.md,
   },
   error: {
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 13,
     color: theme.colors.error,
-    marginBottom: theme.spacing.md,
+    marginVertical: theme.spacing.sm,
     textAlign: 'center',
   },
   footer: {
     alignItems: 'center',
-    marginTop: theme.spacing.xl,
     paddingBottom: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
   },
   footerText: {
     fontFamily: theme.typography.fontFamily.sans,
-    fontSize: 13,
+    fontSize: 14,
     color: theme.colors.textMuted,
   },
   footerLink: {
     color: theme.colors.primary,
     fontWeight: '700',
-  },
-  securedText: {
-    fontFamily: theme.typography.fontFamily.mono,
-    fontSize: 9,
-    color: theme.colors.textSubtle,
-    letterSpacing: 1.8,
-    marginTop: 12,
   },
 });
