@@ -605,7 +605,7 @@ function MovieDetailModal({ movie, onClose }: { movie: Movie | null; onClose: ()
             <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           </Animated.View>
           <Animated.View
-            entering={SlideInDown.springify().damping(20).mass(0.6)}
+            entering={SlideInDown.duration(220)}
             style={styles.modalSheet}
           >
             <View style={styles.modalHandle} />
@@ -717,7 +717,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     flex: 1,
-    backgroundColor: theme.colors.surface,
+    // Solid surface instead of the translucent token — the swipe card needs
+    // to feel like a real object sitting on top of the page, not a tinted
+    // overlay that lets the navy bg bleed through.
+    backgroundColor: '#0c1830',
     borderRadius: theme.radii.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,

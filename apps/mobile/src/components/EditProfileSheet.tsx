@@ -96,7 +96,7 @@ export function EditProfileSheet({
           </Animated.View>
 
           <Animated.View
-            entering={SlideInDown.springify().damping(20).mass(0.6)}
+            entering={SlideInDown.duration(220)}
             style={styles.sheet}
           >
             <KeyboardAvoidingView
