@@ -36,6 +36,15 @@ interface Movie {
   year: number | null;
   posterPath: string | null;
   overview?: string | null;
+  // Cosine distance from the "meeting point" of both users' taste vectors.
+  // Cold-start uses 1 as a placeholder, so anything >= 0.99 is not a real score.
+  distance?: number | null;
+}
+
+function matchScoreFromDistance(distance: number | null | undefined): number | null {
+  if (distance == null || distance >= 0.99) return null;
+  const clamped = Math.max(0, Math.min(1, distance));
+  return Math.round((1 - clamped) * 100);
 }
 
 interface SessionInfo {
@@ -106,7 +115,7 @@ export default function SessionScreen() {
       setPodiumSize(data.podiumSize);
       setMatchBanner(data);
       heavy();
-      setTimeout(() => setMatchBanner(null), 2800);
+      setTimeout(() => setMatchBanner(null), 3200);
     });
 
     const offCompleted = socketService.on(
@@ -416,6 +425,8 @@ function ActionButton({
 
 function CardBody({ movie, compact }: { movie: Movie; compact?: boolean }) {
   const uri = posterUri(movie.posterPath);
+  const score = matchScoreFromDistance(movie.distance);
+
   return (
     <>
       {uri ? (
@@ -435,7 +446,12 @@ function CardBody({ movie, compact }: { movie: Movie; compact?: boolean }) {
       )}
       <View style={styles.cardCaption}>
         <Text style={styles.cardTitle} numberOfLines={2}>{movie.title}</Text>
-        {movie.year ? <Text style={styles.cardYear}>{movie.year}</Text> : null}
+        {(movie.year || score != null) && (
+          <View style={styles.cardMetaRow}>
+            {movie.year ? <Text style={styles.cardYear}>{movie.year}</Text> : null}
+            {score != null ? <MatchChip score={score} /> : null}
+          </View>
+        )}
         {!compact && movie.overview ? (
           <Text style={styles.cardOverview} numberOfLines={3}>
             {movie.overview}
@@ -448,6 +464,15 @@ function CardBody({ movie, compact }: { movie: Movie; compact?: boolean }) {
         ) : null}
       </View>
     </>
+  );
+}
+
+function MatchChip({ score }: { score: number }) {
+  return (
+    <View style={styles.matchChip}>
+      <Ionicons name="heart" size={11} color={theme.colors.primary} />
+      <Text style={styles.matchChipText}>{score}% MATCH</Text>
+    </View>
   );
 }
 
@@ -562,26 +587,37 @@ function PosterThumb({ movie, size }: { movie: Movie; size: number }) {
 
 function MatchBanner({ event }: { event: MatchEvent }) {
   return (
-    <Animated.View
-      entering={SlideInDown.springify().damping(16)}
-      exiting={SlideOutDown.duration(220)}
-      style={styles.matchBanner}
-      pointerEvents="none"
-    >
-      <View style={styles.matchBannerInner}>
-        <PosterThumb movie={event.movie} size={52} />
-        <View style={{ flex: 1 }}>
-          <View style={styles.matchTitleRow}>
-            <Ionicons name="heart" size={14} color={theme.colors.primaryDark} />
-            <Text style={styles.matchTitle}>IT'S A MATCH</Text>
+    <>
+      <Animated.View
+        entering={FadeIn.duration(280)}
+        exiting={FadeOut.duration(220)}
+        style={styles.matchBackdrop}
+        pointerEvents="none"
+      />
+      <Animated.View
+        entering={SlideInDown.springify().damping(15).mass(0.6)}
+        exiting={SlideOutDown.duration(260)}
+        style={styles.matchBanner}
+        pointerEvents="none"
+      >
+        <View style={styles.matchBannerInner}>
+          <PosterThumb movie={event.movie} size={88} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <View style={styles.matchTitleRow}>
+              <Ionicons name="heart" size={16} color={theme.colors.primaryDark} />
+              <Text style={styles.matchTitle}>IT'S A MATCH!</Text>
+            </View>
+            <Text style={styles.matchMovie} numberOfLines={2}>{event.movie.title}</Text>
+            <View style={styles.matchProgressRow}>
+              <Ionicons name="trophy" size={11} color={theme.colors.primaryDark} />
+              <Text style={styles.matchProgress}>
+                {event.currentCount} of {event.podiumSize} podium picks
+              </Text>
+            </View>
           </View>
-          <Text style={styles.matchMovie} numberOfLines={1}>{event.movie.title}</Text>
-          <Text style={styles.matchProgress}>
-            {event.currentCount} of {event.podiumSize} so far
-          </Text>
         </View>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </>
   );
 }
 
@@ -617,14 +653,24 @@ function MovieDetailModal({ movie, onClose }: { movie: Movie | null; onClose: ()
                 <PosterThumb movie={movie} size={120} />
                 <View style={{ flex: 1, gap: 6 }}>
                   <Text style={styles.modalTitle} numberOfLines={3}>{movie.title}</Text>
-                  {movie.year ? (
-                    <View style={styles.modalChipRow}>
+                  <View style={styles.modalChipRow}>
+                    {movie.year ? (
                       <View style={styles.modalChip}>
                         <Ionicons name="calendar-outline" size={12} color={theme.colors.primary} />
                         <Text style={styles.modalChipText}>{movie.year}</Text>
                       </View>
-                    </View>
-                  ) : null}
+                    ) : null}
+                    {(() => {
+                      const score = matchScoreFromDistance(movie.distance);
+                      if (score == null) return null;
+                      return (
+                        <View style={styles.modalChip}>
+                          <Ionicons name="heart" size={12} color={theme.colors.primary} />
+                          <Text style={styles.modalChipText}>{score}% MATCH</Text>
+                        </View>
+                      );
+                    })()}
+                  </View>
                 </View>
                 <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityLabel="Close">
                   <Ionicons name="close" size={26} color={theme.colors.textMuted} />
@@ -764,7 +810,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textSubtle,
     letterSpacing: 1.2,
-    marginTop: 4,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: 6,
+  },
+  matchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: 'rgba(163,230,53,0.30)',
+  },
+  matchChipText: {
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: 10,
+    color: theme.colors.primary,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
   cardOverview: {
     fontFamily: theme.typography.fontFamily.sans,
@@ -894,20 +963,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Match banner
+  // Match celebration
+  matchBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(2,6,23,0.55)',
+  },
   matchBanner: {
     position: 'absolute',
-    top: '32%',
+    top: '28%',
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radii.xl,
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg,
     shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.6,
+    shadowRadius: 40,
+    elevation: 16,
   },
   matchBannerInner: {
     flexDirection: 'row',
@@ -921,26 +994,32 @@ const styles = StyleSheet.create({
   },
   matchTitle: {
     fontFamily: theme.typography.fontFamily.mono,
-    fontWeight: '800',
-    fontSize: 11,
+    fontWeight: '900',
+    fontSize: 13,
     color: theme.colors.primaryDark,
-    letterSpacing: 2,
+    letterSpacing: 2.5,
   },
   matchMovie: {
     fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: '800',
-    fontSize: 18,
+    fontWeight: '900',
+    fontSize: 22,
     color: theme.colors.primaryDark,
-    marginTop: 2,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
+    lineHeight: 26,
+  },
+  matchProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
   },
   matchProgress: {
     fontFamily: theme.typography.fontFamily.mono,
     fontSize: 11,
     color: theme.colors.primaryDark,
-    marginTop: 2,
     letterSpacing: 0.5,
-    opacity: 0.7,
+    opacity: 0.75,
+    fontWeight: '700',
   },
 
   // Error

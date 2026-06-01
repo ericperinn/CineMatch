@@ -53,6 +53,7 @@ export default function HomeScreen() {
   const { mutate: acceptRequest } = useAcceptFriendRequest();
   const { mutate: cancelFriendship } = useCancelFriendship();
 
+  const [sessionMode, setSessionMode] = useState<'DISCOVERY' | 'WATCHLIST'>('DISCOVERY');
   const [joinCode, setJoinCode] = useState('');
   const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +120,7 @@ export default function HomeScreen() {
     setError(null);
     tap();
     setPendingFriendId(friend.id);
-    socketService.emit('session:create', { guestId: friend.id, mode: 'DISCOVERY' });
+    socketService.emit('session:create', { guestId: friend.id, mode: sessionMode });
   };
 
   const joinByCode = () => {
@@ -286,6 +287,27 @@ export default function HomeScreen() {
           <Text style={styles.heroTitle}>
             Swipe with <Text style={{ color: theme.colors.primary }}>a friend</Text> tonight.
           </Text>
+
+          <View style={styles.modeToggle}>
+            <ModePill
+              icon="compass"
+              label="Discovery"
+              active={sessionMode === 'DISCOVERY'}
+              onPress={() => {
+                tap();
+                setSessionMode('DISCOVERY');
+              }}
+            />
+            <ModePill
+              icon="bookmark"
+              label="Watchlist"
+              active={sessionMode === 'WATCHLIST'}
+              onPress={() => {
+                tap();
+                setSessionMode('WATCHLIST');
+              }}
+            />
+          </View>
 
           {friendsLoading ? (
             <View style={styles.friendStripWrap}>
@@ -457,6 +479,35 @@ function SectionHeader({
   );
 }
 
+function ModePill({
+  icon,
+  label,
+  active,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={[styles.modePill, active && styles.modePillActive]}
+    >
+      <Ionicons
+        name={icon}
+        size={14}
+        color={active ? theme.colors.primaryDark : theme.colors.textMuted}
+      />
+      <Text style={[styles.modePillText, active && styles.modePillTextActive]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 function SearchResultRow({
   result,
   sending,
@@ -603,6 +654,38 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     letterSpacing: -0.5,
     marginBottom: theme.spacing.md,
+  },
+
+  // Discovery / Watchlist segmented control
+  modeToggle: {
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    borderRadius: theme.radii.full,
+    padding: 4,
+    marginBottom: theme.spacing.md,
+    alignSelf: 'flex-start',
+  },
+  modePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radii.full,
+  },
+  modePillActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  modePillText: {
+    fontFamily: theme.typography.fontFamily.sans,
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
+    letterSpacing: 0.3,
+  },
+  modePillTextActive: {
+    color: theme.colors.primaryDark,
   },
 
   // Friend chips

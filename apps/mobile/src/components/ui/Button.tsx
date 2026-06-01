@@ -1,21 +1,38 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Pressable,
+  PressableProps,
+  StyleProp,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  TouchableOpacityProps,
+  ViewStyle,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { theme } from '../../constants/theme';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'tonal' | 'outline' | 'ghost' | 'danger';
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export interface ButtonProps extends TouchableOpacityProps {
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'tonal'
+  | 'outline'
+  | 'ghost'
+  | 'danger';
+
+export interface ButtonProps
+  extends Omit<PressableProps, 'style' | 'children'> {
   label: string;
   variant?: ButtonVariant;
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function Button({
@@ -26,21 +43,48 @@ export function Button({
   rightIcon,
   style,
   disabled,
+  onPressIn,
+  onPressOut,
   ...rest
 }: ButtonProps) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn: PressableProps['onPressIn'] = (e) => {
+    scale.value = withSpring(0.96, {
+      damping: 14,
+      stiffness: 260,
+      mass: 0.4,
+    });
+    onPressIn?.(e);
+  };
+  const handlePressOut: PressableProps['onPressOut'] = (e) => {
+    scale.value = withSpring(1, {
+      damping: 16,
+      stiffness: 220,
+      mass: 0.5,
+    });
+    onPressOut?.(e);
+  };
+
   const containerStyle = variantContainer(variant);
   const textColor = variantTextColor(variant);
 
   return (
-    <TouchableOpacity
+    <AnimatedPressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={disabled || isLoading}
       style={[
         styles.base,
         containerStyle,
         (disabled || isLoading) && styles.disabled,
+        animatedStyle,
         style,
       ]}
-      disabled={disabled || isLoading}
-      activeOpacity={0.75}
       {...rest}
     >
       {isLoading ? (
@@ -52,7 +96,7 @@ export function Button({
           {rightIcon}
         </>
       )}
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
@@ -107,29 +151,24 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 6,
   },
-  // Filled neutral — most visible non-primary CTA.
   secondary: {
     backgroundColor: 'rgba(255,255,255,0.10)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
   },
-  // Lime-tinted, used for soft CTAs that still want a brand accent.
   tonal: {
     backgroundColor: theme.colors.primarySoft,
     borderWidth: 1,
     borderColor: 'rgba(163,230,53,0.30)',
   },
-  // Bordered, transparent fill — for tertiary actions like "Leave" / "Log out".
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.28)',
   },
-  // No fill, no border — for purely secondary text actions (e.g. "Dismiss").
   ghost: {
     backgroundColor: 'transparent',
   },
-  // Destructive — used for explicit dangerous actions.
   danger: {
     backgroundColor: theme.colors.errorSoft,
     borderWidth: 1,
