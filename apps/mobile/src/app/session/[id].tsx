@@ -452,9 +452,25 @@ function CardBody({ movie, compact }: { movie: Movie; compact?: boolean }) {
 }
 
 function StaticCard({ movie }: { movie: Movie }) {
+  // The "next card" preview only shows the poster — caption would otherwise
+  // bleed through the gap above the current card's caption and look like
+  // ghost-text overlapping the front card title.
+  const uri = posterUri(movie.posterPath);
   return (
     <View style={styles.card}>
-      <CardBody movie={movie} compact />
+      {uri ? (
+        <Image
+          source={{ uri }}
+          style={styles.posterFill}
+          contentFit="cover"
+          transition={250}
+          placeholder={{ blurhash: POSTER_BLURHASH }}
+          placeholderContentFit="cover"
+          cachePolicy="memory-disk"
+        />
+      ) : (
+        <View style={[styles.posterFill, styles.posterPlaceholder]} />
+      )}
     </View>
   );
 }
@@ -712,6 +728,11 @@ const styles = StyleSheet.create({
   poster: {
     width: '100%',
     flex: 1,
+    backgroundColor: theme.colors.surfaceHighlight,
+  },
+  posterFill: {
+    width: '100%',
+    height: '100%',
     backgroundColor: theme.colors.surfaceHighlight,
   },
   posterPlaceholder: {
