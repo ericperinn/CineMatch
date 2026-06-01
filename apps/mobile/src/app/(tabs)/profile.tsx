@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useProfileStatus, useSyncProfile } from '@/services/queries/profile.queries';
 import { socketService } from '@/services/socket';
 import { copyToClipboard, success, tap } from '@/lib/feedback';
+import { EditProfileSheet } from '@/components/EditProfileSheet';
 
 const SYNCING_STATES = ['waiting', 'active', 'delayed'];
 
@@ -18,6 +19,7 @@ export default function ProfileScreen() {
   const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
   const [copiedId, setCopiedId] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const copyUserId = async () => {
     if (!user?.id) return;
@@ -57,6 +59,18 @@ export default function ProfileScreen() {
           <Avatar name={user?.name || 'User'} size={80} ring ringColor={theme.colors.primary} />
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
+          <Button
+            label="Edit profile"
+            variant="tonal"
+            onPress={() => {
+              tap();
+              setEditing(true);
+            }}
+            leftIcon={
+              <Ionicons name="create-outline" size={16} color={theme.colors.primary} />
+            }
+            style={styles.editBtn}
+          />
         </View>
 
         <View style={styles.card}>
@@ -126,6 +140,8 @@ export default function ProfileScreen() {
           }
         />
       </ScrollView>
+
+      <EditProfileSheet visible={editing} onClose={() => setEditing(false)} />
     </ScreenContainer>
   );
 }
@@ -178,6 +194,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 14,
     color: theme.colors.textMuted,
+  },
+  editBtn: {
+    marginTop: theme.spacing.md,
+    height: 44,
+    paddingHorizontal: theme.spacing.lg,
   },
   card: {
     backgroundColor: theme.colors.surface,

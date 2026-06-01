@@ -15,6 +15,7 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { theme } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
@@ -278,7 +279,16 @@ export default function HomeScreen() {
           </Text>
 
           {friendsLoading ? (
-            <ActivityIndicator color={theme.colors.primary} style={{ marginTop: theme.spacing.lg }} />
+            <View style={styles.friendStripWrap}>
+              <View style={styles.friendStrip}>
+                {[0, 1, 2, 3].map((i) => (
+                  <View key={i} style={styles.friendChip}>
+                    <Skeleton width={64} height={64} borderRadius={32} />
+                    <Skeleton width={52} height={10} borderRadius={4} />
+                  </View>
+                ))}
+              </View>
+            </View>
           ) : !friends || friends.length === 0 ? (
             <View style={styles.emptyFriends}>
               <View style={styles.emptyMark}>

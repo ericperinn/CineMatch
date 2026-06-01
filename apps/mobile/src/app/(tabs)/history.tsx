@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Avatar } from '@/components/ui/Avatar';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { theme } from '@/constants/theme';
 import {
   useSessionHistory,
@@ -42,8 +43,9 @@ export default function HistoryScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={theme.colors.primary} />
+        <View style={[styles.listContent, { paddingTop: theme.spacing.md, gap: theme.spacing.md }]}>
+          <SessionRowSkeleton />
+          <SessionRowSkeleton />
         </View>
       ) : (
         <FlatList
@@ -64,6 +66,30 @@ export default function HistoryScreen() {
         />
       )}
     </ScreenContainer>
+  );
+}
+
+function SessionRowSkeleton() {
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowHeader}>
+        <Skeleton width={44} height={44} borderRadius={22} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <Skeleton width="60%" height={14} />
+          <Skeleton width="40%" height={10} />
+        </View>
+        <Skeleton width={70} height={22} borderRadius={11} />
+      </View>
+      <View style={styles.posterStrip}>
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={styles.thumb}>
+            <Skeleton width="100%" height={120} borderRadius={theme.radii.md} />
+            <Skeleton width="80%" height={10} />
+            <Skeleton width="40%" height={9} />
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
