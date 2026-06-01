@@ -18,10 +18,13 @@ import { theme } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
   useAcceptFriendRequest,
+  useCancelFriendship,
   useFriends,
   usePendingFriends,
   useSendFriendRequest,
+  useUserSearch,
   type FriendshipRow,
+  type UserSearchResult,
 } from '@/services/queries/friends.queries';
 import { extractApiError } from '@/services/queries/auth.queries';
 import { socketService } from '@/services/socket';
@@ -42,16 +45,27 @@ export default function HomeScreen() {
   const router = useRouter();
   const { data: friends, isLoading: friendsLoading } = useFriends();
   const { data: pendingFriends } = usePendingFriends();
-  const { mutate: sendRequest, isPending: isSending } = useSendFriendRequest();
+  const { mutate: sendRequest } = useSendFriendRequest();
   const { mutate: acceptRequest } = useAcceptFriendRequest();
+  const { mutate: cancelFriendship } = useCancelFriendship();
 
   const [joinCode, setJoinCode] = useState('');
   const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [friendIdInput, setFriendIdInput] = useState('');
   const [friendStatus, setFriendStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [invites, setInvites] = useState<SessionInvite[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const { data: searchResults, isFetching: isSearching } = useUserSearch(debouncedQuery);
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
@@ -112,21 +126,20 @@ export default function HomeScreen() {
     router.push(`/session/${code}?role=guest`);
   };
 
-  const handleSendRequest = () => {
-    const id = friendIdInput.trim();
-    if (!id) return;
+  const handleSendRequest = (targetId: string) => {
     tap();
+    setSendingId(targetId);
     setFriendStatus(null);
-    sendRequest(id, {
+    sendRequest(targetId, {
       onSuccess: () => {
         success();
         setFriendStatus({ kind: 'ok', text: 'Friend request sent' });
-        setFriendIdInput('');
       },
       onError: (err) => {
         warn();
         setFriendStatus({ kind: 'err', text: extractApiError(err, 'Could not send request') });
       },
+      onSettled: () => setSendingId(null),
     });
   };
 
@@ -141,6 +154,19 @@ export default function HomeScreen() {
         setFriendStatus({ kind: 'err', text: extractApiError(err, 'Could not accept request') });
       },
       onSettled: () => setAcceptingId(null),
+    });
+  };
+
+  const handleCancel = (friendshipId: string) => {
+    tap();
+    setCancelingId(friendshipId);
+    setFriendStatus(null);
+    cancelFriendship(friendshipId, {
+      onError: (err) => {
+        warn();
+        setFriendStatus({ kind: 'err', text: extractApiError(err, 'Could not cancel') });
+      },
+      onSettled: () => setCancelingId(null),
     });
   };
 
@@ -230,13 +256,21 @@ export default function HomeScreen() {
             {pendingFriends.map((row) => (
               <View key={row.id} style={styles.pendingRow}>
                 <Avatar name={row.user.name} size={36} />
-                <Text style={styles.friendName}>{row.user.name}</Text>
+                <Text style={styles.friendName} numberOfLines={1}>{row.user.name}</Text>
                 <Button
-                  label={acceptingId === row.id ? 'Accepting…' : 'Accept'}
-                  variant="secondary"
+                  label={acceptingId === row.id ? '…' : 'Accept'}
+                  variant="primary"
                   onPress={() => handleAccept(row.id)}
-                  disabled={acceptingId === row.id}
+                  disabled={acceptingId === row.id || cancelingId === row.id}
                 />
+                <TouchableOpacity
+                  onPress={() => handleCancel(row.id)}
+                  disabled={acceptingId === row.id || cancelingId === row.id}
+                  hitSlop={12}
+                  style={styles.declineBtn}
+                >
+                  <Text style={styles.declineText}>✕</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </View>
@@ -246,20 +280,37 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Add a friend</Text>
           <Input
             label=""
-            placeholder="Paste friend's user ID"
-            value={friendIdInput}
-            onChangeText={setFriendIdInput}
+            placeholder="Search by email or name"
+            value={searchInput}
+            onChangeText={setSearchInput}
             autoCapitalize="none"
             autoCorrect={false}
-            style={styles.idInput}
+            keyboardType="email-address"
           />
-          <Button
-            label="Send request"
-            variant="secondary"
-            onPress={handleSendRequest}
-            isLoading={isSending}
-            disabled={friendIdInput.trim().length < 6 || isSending}
-          />
+          {debouncedQuery.length >= 2 && isSearching && (
+            <ActivityIndicator
+              color={theme.colors.primary}
+              style={{ marginTop: theme.spacing.sm }}
+            />
+          )}
+          {searchResults?.map((result) => (
+            <SearchResultRow
+              key={result.id}
+              result={result}
+              sending={sendingId === result.id}
+              canceling={!!result.friendshipId && cancelingId === result.friendshipId}
+              accepting={!!result.friendshipId && acceptingId === result.friendshipId}
+              onSend={() => handleSendRequest(result.id)}
+              onCancel={() => result.friendshipId && handleCancel(result.friendshipId)}
+              onAccept={() => result.friendshipId && handleAccept(result.friendshipId)}
+            />
+          ))}
+          {debouncedQuery.length >= 2 &&
+            !isSearching &&
+            searchResults &&
+            searchResults.length === 0 && (
+              <Text style={styles.emptySearchText}>No users match "{debouncedQuery}".</Text>
+            )}
         </View>
 
         {friendStatus && (
@@ -296,6 +347,66 @@ export default function HomeScreen() {
         {error && <Text style={styles.error}>{error}</Text>}
       </ScrollView>
     </ScreenContainer>
+  );
+}
+
+function SearchResultRow({
+  result,
+  sending,
+  canceling,
+  accepting,
+  onSend,
+  onCancel,
+  onAccept,
+}: {
+  result: UserSearchResult;
+  sending: boolean;
+  canceling: boolean;
+  accepting: boolean;
+  onSend: () => void;
+  onCancel: () => void;
+  onAccept: () => void;
+}) {
+  const renderAction = () => {
+    switch (result.relationship) {
+      case 'friends':
+        return <Text style={styles.statePill}>Friends</Text>;
+      case 'pending_sent':
+        return (
+          <Button
+            label={canceling ? '…' : 'Cancel'}
+            variant="ghost"
+            onPress={onCancel}
+            disabled={canceling}
+          />
+        );
+      case 'pending_received':
+        return (
+          <Button
+            label={accepting ? '…' : 'Accept'}
+            variant="primary"
+            onPress={onAccept}
+            disabled={accepting}
+          />
+        );
+      default:
+        return (
+          <Button
+            label={sending ? '…' : 'Add'}
+            variant="secondary"
+            onPress={onSend}
+            disabled={sending}
+          />
+        );
+    }
+  };
+
+  return (
+    <View style={styles.searchRow}>
+      <Avatar name={result.name} size={36} />
+      <Text style={styles.friendName} numberOfLines={1}>{result.name}</Text>
+      {renderAction()}
+    </View>
   );
 }
 
@@ -444,6 +555,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
+  },
+  declineBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.surfaceHighlight,
+  },
+  declineText: {
+    fontFamily: theme.typography.fontFamily.sans,
+    fontWeight: '700',
+    fontSize: 14,
+    color: theme.colors.textMuted,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  statePill: {
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: 10,
+    color: theme.colors.primary,
+    letterSpacing: 1.5,
+    fontWeight: '700',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 8,
+  },
+  emptySearchText: {
+    fontFamily: theme.typography.fontFamily.sans,
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
   },
   idInput: {
     fontFamily: theme.typography.fontFamily.mono,

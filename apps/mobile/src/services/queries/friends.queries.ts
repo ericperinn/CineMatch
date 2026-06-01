@@ -22,6 +22,20 @@ export interface PendingRow {
   user: Friend;
 }
 
+export type FriendshipRelation =
+  | 'none'
+  | 'pending_sent'
+  | 'pending_received'
+  | 'friends';
+
+export interface UserSearchResult {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  relationship: FriendshipRelation;
+  friendshipId: string | null;
+}
+
 const FRIENDS_KEY = ['friends'];
 const PENDING_KEY = ['friends', 'pending'];
 
@@ -77,3 +91,33 @@ export const useAcceptFriendRequest = () => {
     },
   });
 };
+
+// Used for: canceling a request you sent, declining one you received,
+// or removing an accepted friendship.
+export const useCancelFriendship = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (friendshipId: string) => {
+      await api.delete(`/friends/${friendshipId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FRIENDS_KEY });
+    },
+  });
+};
+
+// Debounced user search. The screen passes a query that's already
+// debounced — we just don't fire below 2 chars and we keep results
+// cached briefly so revisits aren't slow.
+export const useUserSearch = (query: string) =>
+  useQuery({
+    queryKey: ['users', 'search', query],
+    queryFn: async () => {
+      const { data } = await api.get<UserSearchResult[]>('/users/search', {
+        params: { q: query },
+      });
+      return data;
+    },
+    enabled: query.trim().length >= 2,
+    staleTime: 15_000,
+  });
