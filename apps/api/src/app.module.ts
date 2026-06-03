@@ -10,6 +10,7 @@ import { ProfileModule } from "./profile/profile.module";
 import { UsersModule } from "./users/users.module";
 import { MatchModule } from "./match/match.module";
 import { SessionsModule } from "./sessions/sessions.module";
+import { PushModule } from "./push/push.module";
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SessionsModule } from "./sessions/sessions.module";
     ProfileModule,
     MatchModule,
     SessionsModule,
+    PushModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

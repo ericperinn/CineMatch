@@ -13,5 +13,8 @@
     "apps/worker",
     "packages/database",
     "apps/mobile"
-  ]
+  ],
+  "devDependencies": {
+    "@types/react": "~19.1.10"
+  }
 }

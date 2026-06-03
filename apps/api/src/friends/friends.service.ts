@@ -3,10 +3,12 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { FriendshipStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { PushService } from "../push/push.service";
 
 const friendSelect = {
   id: true,
@@ -19,7 +21,22 @@ const friendSelect = {
 
 @Injectable()
 export class FriendsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(FriendsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushService,
+  ) {}
+
+  // Fire-and-forget push. Notification failures must never break the
+  // underlying request, so we log and swallow.
+  private async tryPush(userId: string, title: string, body: string, data?: Record<string, unknown>) {
+    try {
+      await this.push.sendToUser(userId, { title, body, data });
+    } catch (err) {
+      this.logger.warn(`Push to ${userId} failed: ${(err as Error).message}`);
+    }
+  }
 
   async listAccepted(userId: string) {
     const rows = await this.prisma.friendship.findMany({
@@ -84,10 +101,19 @@ export class FriendsService {
       );
     }
 
-    return this.prisma.friendship.create({
+    const created = await this.prisma.friendship.create({
       data: { userId: senderId, friendId: targetId, status: FriendshipStatus.PENDING },
       select: friendSelect,
     });
+
+    this.tryPush(
+      targetId,
+      "New friend request",
+      `${created.user.name} wants to be friends`,
+      { type: "friend_request", friendshipId: created.id },
+    );
+
+    return created;
   }
 
   async accept(userId: string, friendshipId: string) {
@@ -106,11 +132,21 @@ export class FriendsService {
       throw new ConflictException(`Cannot accept a friendship that is ${friendship.status}`);
     }
 
-    return this.prisma.friendship.update({
+    const accepted = await this.prisma.friendship.update({
       where: { id: friendshipId },
       data: { status: FriendshipStatus.ACCEPTED },
       select: friendSelect,
     });
+
+    // Notify the original sender that their request is now accepted.
+    this.tryPush(
+      accepted.user.id,
+      "Friend request accepted",
+      `${accepted.friend.name} is now your friend`,
+      { type: "friend_accepted", friendshipId: accepted.id },
+    );
+
+    return accepted;
   }
 
   async remove(userId: string, friendshipId: string) {

@@ -13,6 +13,7 @@ import {
 import { SessionMode, VoteType } from "@prisma/client";
 import { Server, WebSocket } from "ws";
 import { MatchService } from "./match.service";
+import { PushService } from "../push/push.service";
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId: string;
@@ -30,7 +31,15 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly matchService: MatchService,
+    private readonly push: PushService,
   ) {}
+
+  // Fire-and-forget push helper — never bubble errors into the WS handler.
+  private tryPush(userId: string, title: string, body: string, data?: Record<string, unknown>) {
+    this.push.sendToUser(userId, { title, body, data }).catch((err) => {
+      this.logger.warn(`Push to ${userId} failed: ${err.message}`);
+    });
+  }
 
   async handleConnection(client: WebSocket, ...args: any[]) {
     try {
@@ -99,6 +108,13 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
         mode: session.mode,
         host: session.host,
       });
+
+      this.tryPush(
+        payload.guestId,
+        "Session invite",
+        `${session.host.name} wants to swipe with you`,
+        { type: "session_invite", sessionId: session.id },
+      );
     } catch (error: any) {
       this.sendToUser(client.userId, "error", { code: "CREATE_FAILED", message: error.message });
     }
@@ -171,6 +187,12 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
           currentCount: result.currentCount,
           podiumSize: result.podiumSize,
         });
+
+        const matchTitle = "It's a match!";
+        const matchBody = `${result.movie.title} — ${result.currentCount} of ${result.podiumSize} on your podium`;
+        const matchData = { type: "match", sessionId: session.id, movieId: result.movie.id };
+        this.tryPush(session.hostId, matchTitle, matchBody, matchData);
+        this.tryPush(session.guestId, matchTitle, matchBody, matchData);
 
         if (result.isCompleted) {
           const podium = await this.matchService.getPodium(session.id);
