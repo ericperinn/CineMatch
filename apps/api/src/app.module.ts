@@ -1,7 +1,5 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { APP_GUARD } from "@nestjs/core";
-import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth/auth.module";
 import { FriendsModule } from "./friends/friends.module";
 import { HealthModule } from "./health/health.module";
@@ -19,13 +17,8 @@ import { PushModule } from "./push/push.module";
       envFilePath: [".env.local", ".env"],
       ignoreEnvFile: process.env.NODE_ENV === "production",
     }),
-    ThrottlerModule.forRoot([
-      // Default: 300 req/min per IP. Generous for dev with mobile polling
-      // (friends/pending every 15s) and multi-device testing.
-      { name: "default", ttl: 60_000, limit: 300 },
-      // Strict bucket — opt-in per endpoint with @Throttle({ strict: ... })
-      { name: "strict", ttl: 60_000, limit: 5 },
-    ]),
+    // Rate limiter disabled for dev. Re-add ThrottlerModule.forRoot([...]) and
+    // the APP_GUARD provider below when getting close to production.
     PrismaModule,
     HealthModule,
     AuthModule,
@@ -37,6 +30,6 @@ import { PushModule } from "./push/push.module";
     PushModule,
   ],
   controllers: [],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [],
 })
 export class AppModule {}

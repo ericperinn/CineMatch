@@ -51,6 +51,13 @@
     ],
     "experiments": {
       "tsconfigPaths": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5c75e0b0-c8f9-42e0-b2e8-1f6ce882d6a8"
+      }
+    },
+    "owner": "ericperin"
   }
 }

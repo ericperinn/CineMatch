@@ -29,7 +29,10 @@ async function setupAndroidChannelAsync() {
 }
 
 async function fetchExpoPushToken(): Promise<string | null> {
-  if (!Device.isDevice) return null;
+  if (!Device.isDevice) {
+    console.log('[push] skipped: not a physical device (web or simulator)');
+    return null;
+  }
 
   const existing = await Notifications.getPermissionsAsync();
   let status = existing.status;
@@ -37,19 +40,25 @@ async function fetchExpoPushToken(): Promise<string | null> {
     const result = await Notifications.requestPermissionsAsync();
     status = result.status;
   }
-  if (status !== 'granted') return null;
+  if (status !== 'granted') {
+    console.log('[push] permission not granted:', status);
+    return null;
+  }
 
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ??
     (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId;
 
+  console.log('[push] requesting token, projectId =', projectId ?? '(none)');
+
   try {
     const result = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined,
     );
+    console.log('[push] got token:', result.data);
     return result.data;
   } catch (err) {
-    console.warn('[push] could not get Expo push token', err);
+    console.warn('[push] getExpoPushTokenAsync failed:', (err as Error)?.message ?? err);
     return null;
   }
 }
@@ -64,9 +73,15 @@ export async function registerPushToken(): Promise<string | null> {
       token,
       platform: Platform.OS,
     });
+    console.log('[push] backend registered token for', Platform.OS);
     return token;
   } catch (err) {
-    console.warn('[push] backend register failed', err);
+    console.warn(
+      '[push] backend register failed:',
+      (err as { response?: { status?: number; data?: unknown }; message?: string })?.response?.data
+        ?? (err as Error)?.message
+        ?? err,
+    );
     return null;
   }
 }

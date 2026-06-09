@@ -36,11 +36,14 @@ export class SessionsService {
     const podiumsBySession = new Map<string, Array<{ id: string; title: string; year: number | null; posterPath: string | null }>>();
 
     if (completedIds.length > 0) {
+      // Prisma's `String @id @default(uuid())` stores ids as TEXT in Postgres,
+      // not the UUID type. Casting the input to uuid[] was throwing
+      // "operator does not exist: text = uuid". Use text[] to match the column.
       const mutualLikes = await this.prisma.$queryRawUnsafe<Array<{ sessionId: string; movieId: string }>>(
         `
         SELECT "sessionId", "movieId"
         FROM swipes
-        WHERE "sessionId" = ANY($1::uuid[]) AND vote = 'LIKE'
+        WHERE "sessionId" = ANY($1::text[]) AND vote = 'LIKE'
         GROUP BY "sessionId", "movieId"
         HAVING COUNT(*) = 2
         `,
