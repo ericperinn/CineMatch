@@ -2,6 +2,12 @@ import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Expo, ExpoPushMessage } from "expo-server-sdk";
 import { PrismaService } from "../prisma/prisma.service";
 
+export type PushType =
+  | "friend_request"
+  | "friend_accepted"
+  | "session_invite"
+  | "match";
+
 export interface PushPayload {
   title: string;
   body: string;
@@ -37,7 +43,30 @@ export class PushService {
     await this.prisma.pushToken.deleteMany({ where: { token } });
   }
 
-  async sendToUser(userId: string, payload: PushPayload): Promise<void> {
+  async sendToUser(userId: string, payload: PushPayload, type?: PushType): Promise<void> {
+    // Respect the user's notification preferences. When `type` isn't given
+    // (e.g., a system message), fall through and send.
+    if (type) {
+      const prefs = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          notifyFriendRequests: true,
+          notifySessionInvites: true,
+          notifyMatches: true,
+        },
+      });
+      if (!prefs) return;
+      const allowed =
+        type === "friend_request" || type === "friend_accepted"
+          ? prefs.notifyFriendRequests
+          : type === "session_invite"
+            ? prefs.notifySessionInvites
+            : type === "match"
+              ? prefs.notifyMatches
+              : true;
+      if (!allowed) return;
+    }
+
     const rows = await this.prisma.pushToken.findMany({
       where: { userId },
       select: { token: true, platform: true },

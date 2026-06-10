@@ -11,14 +11,17 @@ datasource db {
 }
 
 model User {
-  id                 String   @id @default(uuid())
-  name               String
-  email              String   @unique
-  passwordHash       String
-  letterboxdUsername String?  @unique
-  avatarUrl          String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  name                 String
+  email                String   @unique
+  passwordHash         String
+  letterboxdUsername   String?  @unique
+  avatarUrl            String?
+  notifyFriendRequests Boolean  @default(true)
+  notifySessionInvites Boolean  @default(true)
+  notifyMatches        Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   friendshipsSent     Friendship[]      @relation("FriendshipSender")
   friendshipsReceived Friendship[]      @relation("FriendshipReceiver")

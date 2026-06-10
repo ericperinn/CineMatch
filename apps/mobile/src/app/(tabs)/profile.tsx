@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Share, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { theme } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useProfileStatus, useSyncProfile } from '@/services/queries/profile.queries';
+import { useUpdateNotifications } from '@/services/queries/users.queries';
 import { socketService } from '@/services/socket';
+import { unregisterPushToken } from '@/services/push';
 import { copyToClipboard, success, tap } from '@/lib/feedback';
 import { EditProfileSheet } from '@/components/EditProfileSheet';
 
@@ -52,11 +54,23 @@ export default function ProfileScreen() {
   const syncState = status?.currentSync?.state;
   const isJobRunning = !!syncState && SYNCING_STATES.includes(syncState);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     tap();
+    // Revoke this device's push token *before* clearing auth, otherwise the
+    // DELETE call has no Bearer header and the token lingers on the server.
+    await unregisterPushToken();
     socketService.disconnect();
     logout();
     router.replace('/(auth)/login');
+  };
+
+  const { mutate: updateNotifs, isPending: isUpdatingNotifs } = useUpdateNotifications();
+  const toggleNotif = (
+    key: 'notifyFriendRequests' | 'notifySessionInvites' | 'notifyMatches',
+    value: boolean,
+  ) => {
+    tap();
+    updateNotifs({ [key]: value });
   };
 
   const handleSync = () => {
@@ -160,6 +174,33 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <View style={styles.card}>
+          <SectionHeader icon="notifications-outline" label="NOTIFICATIONS" />
+          <NotificationToggle
+            icon="person-add"
+            label="Friend requests"
+            value={user?.notifyFriendRequests ?? true}
+            disabled={isUpdatingNotifs}
+            onValueChange={(v) => toggleNotif('notifyFriendRequests', v)}
+          />
+          <View style={styles.notifSeparator} />
+          <NotificationToggle
+            icon="paper-plane"
+            label="Session invites"
+            value={user?.notifySessionInvites ?? true}
+            disabled={isUpdatingNotifs}
+            onValueChange={(v) => toggleNotif('notifySessionInvites', v)}
+          />
+          <View style={styles.notifSeparator} />
+          <NotificationToggle
+            icon="heart"
+            label="Matches"
+            value={user?.notifyMatches ?? true}
+            disabled={isUpdatingNotifs}
+            onValueChange={(v) => toggleNotif('notifyMatches', v)}
+          />
+        </View>
+
         <Button
           label="Log out"
           variant="outline"
@@ -186,6 +227,37 @@ function SectionHeader({
     <View style={styles.sectionHeader}>
       <Ionicons name={icon} size={14} color={theme.colors.primary} />
       <Text style={styles.cardTag}>{label}</Text>
+    </View>
+  );
+}
+
+function NotificationToggle({
+  icon,
+  label,
+  value,
+  disabled,
+  onValueChange,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  value: boolean;
+  disabled?: boolean;
+  onValueChange: (v: boolean) => void;
+}) {
+  return (
+    <View style={styles.notifRow}>
+      <View style={styles.notifIcon}>
+        <Ionicons name={icon} size={16} color={theme.colors.primary} />
+      </View>
+      <Text style={styles.notifLabel}>{label}</Text>
+      <Switch
+        value={value}
+        disabled={disabled}
+        onValueChange={onValueChange}
+        trackColor={{ false: theme.colors.surfaceHighlight, true: theme.colors.primary }}
+        thumbColor={value ? theme.colors.primaryDark : '#fff'}
+        ios_backgroundColor={theme.colors.surfaceHighlight}
+      />
     </View>
   );
 }
@@ -309,5 +381,33 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginTop: theme.spacing.md,
     lineHeight: 18,
+  },
+
+  // Notifications card
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  notifIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifLabel: {
+    flex: 1,
+    fontFamily: theme.typography.fontFamily.sans,
+    fontWeight: '600',
+    fontSize: 15,
+    color: theme.colors.text,
+  },
+  notifSeparator: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 4,
   },
 });

@@ -2,6 +2,20 @@ import { ConflictException, Injectable } from "@nestjs/common";
 import { FriendshipStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateMeDto } from "./dto/update-me.dto";
+import { UpdateNotificationsDto } from "./dto/update-notifications.dto";
+
+const PUBLIC_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  letterboxdUsername: true,
+  avatarUrl: true,
+  notifyFriendRequests: true,
+  notifySessionInvites: true,
+  notifyMatches: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 export type FriendshipRelation =
   | "none"
@@ -108,15 +122,7 @@ export class UsersService {
           ...(dto.avatarUrl !== undefined && { avatarUrl: dto.avatarUrl }),
           ...(dto.letterboxdUsername !== undefined && { letterboxdUsername: dto.letterboxdUsername }),
         },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          letterboxdUsername: true,
-          avatarUrl: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: PUBLIC_USER_SELECT,
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -125,5 +131,23 @@ export class UsersService {
       }
       throw err;
     }
+  }
+
+  async updateNotifications(userId: string, dto: UpdateNotificationsDto) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.notifyFriendRequests !== undefined && {
+          notifyFriendRequests: dto.notifyFriendRequests,
+        }),
+        ...(dto.notifySessionInvites !== undefined && {
+          notifySessionInvites: dto.notifySessionInvites,
+        }),
+        ...(dto.notifyMatches !== undefined && {
+          notifyMatches: dto.notifyMatches,
+        }),
+      },
+      select: PUBLIC_USER_SELECT,
+    });
   }
 }

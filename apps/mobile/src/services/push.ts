@@ -63,6 +63,10 @@ async function fetchExpoPushToken(): Promise<string | null> {
   }
 }
 
+// Tracks the token we registered with the backend so logout can revoke
+// exactly that one (and only that one — other devices keep their own).
+let lastRegisteredToken: string | null = null;
+
 export async function registerPushToken(): Promise<string | null> {
   await setupAndroidChannelAsync();
   const token = await fetchExpoPushToken();
@@ -74,6 +78,7 @@ export async function registerPushToken(): Promise<string | null> {
       platform: Platform.OS,
     });
     console.log('[push] backend registered token for', Platform.OS);
+    lastRegisteredToken = token;
     return token;
   } catch (err) {
     console.warn(
@@ -83,6 +88,25 @@ export async function registerPushToken(): Promise<string | null> {
         ?? err,
     );
     return null;
+  }
+}
+
+export async function unregisterPushToken(): Promise<void> {
+  if (!lastRegisteredToken) return;
+  try {
+    await api.delete('/users/me/push-tokens', {
+      data: { token: lastRegisteredToken },
+    });
+    console.log('[push] backend unregistered token');
+  } catch (err) {
+    console.warn(
+      '[push] backend unregister failed:',
+      (err as { response?: { data?: unknown }; message?: string })?.response?.data
+        ?? (err as Error)?.message
+        ?? err,
+    );
+  } finally {
+    lastRegisteredToken = null;
   }
 }
 

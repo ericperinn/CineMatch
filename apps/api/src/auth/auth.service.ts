@@ -15,6 +15,9 @@ export interface PublicUser {
   email: string;
   letterboxdUsername: string | null;
   avatarUrl: string | null;
+  notifyFriendRequests: boolean;
+  notifySessionInvites: boolean;
+  notifyMatches: boolean;
   createdAt: Date;
 }
 
@@ -62,6 +65,9 @@ export class AuthService {
         email: true,
         letterboxdUsername: true,
         avatarUrl: true,
+        notifyFriendRequests: true,
+        notifySessionInvites: true,
+        notifyMatches: true,
         createdAt: true,
       },
     });
@@ -84,6 +90,9 @@ export class AuthService {
       email: user.email,
       letterboxdUsername: user.letterboxdUsername,
       avatarUrl: user.avatarUrl,
+      notifyFriendRequests: user.notifyFriendRequests,
+      notifySessionInvites: user.notifySessionInvites,
+      notifyMatches: user.notifyMatches,
       createdAt: user.createdAt,
     };
 

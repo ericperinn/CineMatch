@@ -8,6 +8,9 @@ export interface User {
   email: string;
   letterboxdUsername?: string | null;
   avatarUrl?: string | null;
+  notifyFriendRequests?: boolean;
+  notifySessionInvites?: boolean;
+  notifyMatches?: boolean;
 }
 
 interface AuthState {

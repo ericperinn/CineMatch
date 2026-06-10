@@ -37,6 +37,27 @@ export const useUpdateMe = () => {
   });
 };
 
+export interface UpdateNotificationsPayload {
+  notifyFriendRequests?: boolean;
+  notifySessionInvites?: boolean;
+  notifyMatches?: boolean;
+}
+
+export const useUpdateNotifications = () => {
+  const setUser = useAuthStore((state) => state.setUser);
+
+  return useMutation({
+    mutationFn: async (payload: UpdateNotificationsPayload) => {
+      const { data } = await api.patch<UpdateMeResponse>(
+        '/users/me/notifications',
+        payload,
+      );
+      return data.user;
+    },
+    onSuccess: (user) => setUser(user),
+  });
+};
+
 export const useUserById = (id: string | undefined) =>
   useQuery({
     queryKey: ['users', 'byId', id],

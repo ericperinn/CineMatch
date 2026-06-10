@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { FriendshipStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { PushService } from "../push/push.service";
+import { PushService, PushType } from "../push/push.service";
 
 const friendSelect = {
   id: true,
@@ -30,9 +30,15 @@ export class FriendsService {
 
   // Fire-and-forget push. Notification failures must never break the
   // underlying request, so we log and swallow.
-  private async tryPush(userId: string, title: string, body: string, data?: Record<string, unknown>) {
+  private async tryPush(
+    userId: string,
+    title: string,
+    body: string,
+    type: PushType,
+    data?: Record<string, unknown>,
+  ) {
     try {
-      await this.push.sendToUser(userId, { title, body, data });
+      await this.push.sendToUser(userId, { title, body, data }, type);
     } catch (err) {
       this.logger.warn(`Push to ${userId} failed: ${(err as Error).message}`);
     }
@@ -110,6 +116,7 @@ export class FriendsService {
       targetId,
       "New friend request",
       `${created.user.name} wants to be friends`,
+      "friend_request",
       { type: "friend_request", friendshipId: created.id },
     );
 
@@ -143,6 +150,7 @@ export class FriendsService {
       accepted.user.id,
       "Friend request accepted",
       `${accepted.friend.name} is now your friend`,
+      "friend_accepted",
       { type: "friend_accepted", friendshipId: accepted.id },
     );
 

@@ -6,6 +6,9 @@ export interface AuthenticatedUser {
   name: string;
   letterboxdUsername: string | null;
   avatarUrl: string | null;
+  notifyFriendRequests: boolean;
+  notifySessionInvites: boolean;
+  notifyMatches: boolean;
 }
 
 export const CurrentUser = createParamDecorator(

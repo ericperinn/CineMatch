@@ -13,7 +13,7 @@ import {
 import { SessionMode, VoteType } from "@prisma/client";
 import { Server, WebSocket } from "ws";
 import { MatchService } from "./match.service";
-import { PushService } from "../push/push.service";
+import { PushService, PushType } from "../push/push.service";
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId: string;
@@ -35,8 +35,14 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   // Fire-and-forget push helper — never bubble errors into the WS handler.
-  private tryPush(userId: string, title: string, body: string, data?: Record<string, unknown>) {
-    this.push.sendToUser(userId, { title, body, data }).catch((err) => {
+  private tryPush(
+    userId: string,
+    title: string,
+    body: string,
+    type: PushType,
+    data?: Record<string, unknown>,
+  ) {
+    this.push.sendToUser(userId, { title, body, data }, type).catch((err) => {
       this.logger.warn(`Push to ${userId} failed: ${err.message}`);
     });
   }
@@ -113,6 +119,7 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
         payload.guestId,
         "Session invite",
         `${session.host.name} wants to swipe with you`,
+        "session_invite",
         { type: "session_invite", sessionId: session.id },
       );
     } catch (error: any) {
@@ -191,8 +198,8 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const matchTitle = "It's a match!";
         const matchBody = `${result.movie.title} — ${result.currentCount} of ${result.podiumSize} on your podium`;
         const matchData = { type: "match", sessionId: session.id, movieId: result.movie.id };
-        this.tryPush(session.hostId, matchTitle, matchBody, matchData);
-        this.tryPush(session.guestId, matchTitle, matchBody, matchData);
+        this.tryPush(session.hostId, matchTitle, matchBody, "match", matchData);
+        this.tryPush(session.guestId, matchTitle, matchBody, "match", matchData);
 
         if (result.isCompleted) {
           const podium = await this.matchService.getPodium(session.id);
