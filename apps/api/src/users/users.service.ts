@@ -56,24 +56,47 @@ export class UsersService {
           (f.userId === meId && f.friendId === user.id) ||
           (f.friendId === meId && f.userId === user.id),
       );
-
-      let relationship: FriendshipRelation = "none";
-      if (link) {
-        if (link.status === FriendshipStatus.ACCEPTED) {
-          relationship = "friends";
-        } else if (link.userId === meId) {
-          relationship = "pending_sent";
-        } else {
-          relationship = "pending_received";
-        }
-      }
-
       return {
         ...user,
-        relationship,
-        friendshipId: link?.id ?? null,
+        ...this.deriveRelationship(meId, link),
       };
     });
+  }
+
+  async findById(meId: string, otherId: string): Promise<UserSearchResult | null> {
+    if (otherId === meId) return null;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: otherId },
+      select: { id: true, name: true, avatarUrl: true },
+    });
+    if (!user) return null;
+
+    const link = await this.prisma.friendship.findFirst({
+      where: {
+        OR: [
+          { userId: meId, friendId: otherId },
+          { friendId: meId, userId: otherId },
+        ],
+      },
+      select: { id: true, status: true, userId: true, friendId: true },
+    });
+
+    return { ...user, ...this.deriveRelationship(meId, link ?? undefined) };
+  }
+
+  private deriveRelationship(
+    meId: string,
+    link: { id: string; status: string; userId: string } | undefined,
+  ): { relationship: FriendshipRelation; friendshipId: string | null } {
+    if (!link) return { relationship: "none", friendshipId: null };
+    if (link.status === FriendshipStatus.ACCEPTED) {
+      return { relationship: "friends", friendshipId: link.id };
+    }
+    return {
+      relationship: link.userId === meId ? "pending_sent" : "pending_received",
+      friendshipId: link.id,
+    };
   }
 
   async updateMe(userId: string, dto: UpdateMeDto) {

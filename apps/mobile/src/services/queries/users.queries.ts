@@ -1,6 +1,7 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { useAuthStore, type User } from '../../store/useAuthStore';
+import type { UserSearchResult } from './friends.queries';
 
 export interface UpdateMePayload {
   name?: string;
@@ -35,3 +36,17 @@ export const useUpdateMe = () => {
     onSuccess: (user) => setUser(user),
   });
 };
+
+export const useUserById = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['users', 'byId', id],
+    queryFn: async () => {
+      const { data } = await api.get<UserSearchResult>(`/users/${id}`);
+      return data;
+    },
+    enabled: !!id && id.length > 0,
+    // Always refetch when revisiting — friendship state can change while
+    // the user is staring at the confirmation screen.
+    staleTime: 0,
+  });
+

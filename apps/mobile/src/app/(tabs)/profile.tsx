@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Avatar } from '@/components/ui/Avatar';
@@ -27,6 +28,21 @@ export default function ProfileScreen() {
     await success();
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 1500);
+  };
+
+  const shareInviteLink = async () => {
+    if (!user) return;
+    tap();
+    // Linking.createURL picks the right base for the current runtime —
+    // exp:// in Expo Go, cinematch:// in standalone builds.
+    const url = Linking.createURL('/add-friend', { queryParams: { id: user.id } });
+    const message = `${user.name} wants to pick a movie with you on CineMatch.\n\nTap to add them: ${url}`;
+    try {
+      await Share.share({ message, url, title: 'Add me on CineMatch' });
+      await success();
+    } catch {
+      // User cancelled — no-op.
+    }
   };
 
   const hasLetterboxd = !!user?.letterboxdUsername;
@@ -74,27 +90,40 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.card}>
-          <SectionHeader icon="people-outline" label="FRIEND CODE" />
+          <SectionHeader icon="share-social-outline" label="INVITE A FRIEND" />
+          <Text style={styles.meta}>
+            Send a one-tap invite link. They open CineMatch and your profile
+            is preloaded — they just confirm.
+          </Text>
+          <Button
+            label="Share invite link"
+            onPress={shareInviteLink}
+            leftIcon={
+              <Ionicons name="share-outline" size={18} color={theme.colors.primaryDark} />
+            }
+            style={{ marginTop: theme.spacing.md }}
+          />
+
+          <View style={styles.divider} />
+
+          <Text style={styles.subTag}>OR PASTE YOUR ID</Text>
           <View style={styles.codeToken}>
             <Text style={styles.codeValue} selectable numberOfLines={1}>
               {user?.id ?? ''}
             </Text>
           </View>
-          <Text style={styles.meta}>
-            Friends can paste this to add you — or just search your email.
-          </Text>
           <Button
-            label={copiedId ? 'Copied!' : 'Copy code'}
-            variant={copiedId ? 'secondary' : 'primary'}
+            label={copiedId ? 'Copied!' : 'Copy ID'}
+            variant={copiedId ? 'secondary' : 'tonal'}
             onPress={copyUserId}
             leftIcon={
               <Ionicons
                 name={copiedId ? 'checkmark' : 'copy-outline'}
-                size={18}
-                color={copiedId ? theme.colors.text : theme.colors.primaryDark}
+                size={16}
+                color={copiedId ? theme.colors.text : theme.colors.primary}
               />
             }
-            style={{ marginTop: theme.spacing.md }}
+            style={{ marginTop: theme.spacing.sm, height: 44 }}
           />
         </View>
 
@@ -233,6 +262,19 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: theme.spacing.md,
+  },
+  subTag: {
+    fontFamily: theme.typography.fontFamily.mono,
+    fontSize: 9,
+    color: theme.colors.textSubtle,
+    letterSpacing: 1.8,
+    fontWeight: '700',
+    marginBottom: theme.spacing.sm,
   },
   codeValue: {
     fontFamily: theme.typography.fontFamily.mono,
