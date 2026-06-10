@@ -32,8 +32,26 @@ model User {
   watchlist           WatchlistItem[]
   dislikeCooldowns    DislikeCooldown[]
   pushTokens          PushToken[]
+  passwordResets      PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  // SHA-256 hash of the raw token that was emailed. The raw token only
+  // exists in the email link — if the DB leaks, no one can reset anything.
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model PushToken {

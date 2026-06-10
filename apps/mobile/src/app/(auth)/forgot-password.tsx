@@ -13,34 +13,57 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { theme } from '@/constants/theme';
-import { extractApiError, useLoginMutation } from '@/services/queries/auth.queries';
-import { tap, warn } from '@/lib/feedback';
+import { extractApiError, useForgotPasswordMutation } from '@/services/queries/auth.queries';
+import { tap, success, warn } from '@/lib/feedback';
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { mutate: sendReset, isPending } = useForgotPasswordMutation();
 
-  const { mutate: login, isPending } = useLoginMutation();
+  const canSubmit = email.trim().length > 0 && !isPending;
 
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !isPending;
-
-  const handleLogin = () => {
+  const handleSubmit = () => {
     if (!canSubmit) return;
     tap();
     setError(null);
-    login(
-      { email: email.trim(), password },
-      {
-        onSuccess: () => router.replace('/(tabs)/home'),
-        onError: (err) => {
-          warn();
-          setError(extractApiError(err, 'Invalid email or password'));
-        },
-      }
-    );
+    sendReset(email, {
+      onSuccess: () => {
+        success();
+        setSubmitted(true);
+      },
+      onError: (err) => {
+        warn();
+        setError(extractApiError(err, 'Something went wrong'));
+      },
+    });
   };
+
+  if (submitted) {
+    return (
+      <ScreenContainer padded style={styles.container}>
+        <View style={styles.successBlock}>
+          <View style={styles.markOk}>
+            <Ionicons name="mail" size={28} color={theme.colors.primaryDark} />
+          </View>
+          <Text style={styles.title}>Check your inbox</Text>
+          <Text style={styles.body}>
+            If an account exists for{' '}
+            <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{email}</Text>,
+            we sent a reset link. It expires in 1 hour.
+          </Text>
+          <Button
+            label="Back to sign in"
+            onPress={() => router.replace('/(auth)/login')}
+            style={{ marginTop: theme.spacing.xl, alignSelf: 'stretch' }}
+            leftIcon={<Ionicons name="arrow-back" size={18} color={theme.colors.primaryDark} />}
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer padded style={styles.container}>
@@ -54,18 +77,18 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={styles.logoMark}>
-              <Ionicons name="film" size={28} color={theme.colors.primaryDark} />
+            <View style={styles.markPrimary}>
+              <Ionicons name="key" size={24} color={theme.colors.primaryDark} />
             </View>
-            <Text style={styles.brand}>CineMatch</Text>
-            <Text style={styles.tagline}>
-              Pick what to watch tonight — together.
+            <Text style={styles.title}>Reset your password</Text>
+            <Text style={styles.body}>
+              Enter the email tied to your account. We'll send you a link to choose
+              a new password.
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.eyebrow}>SIGN IN</Text>
-
+            <Text style={styles.eyebrow}>EMAIL</Text>
             <Input
               label="Email"
               value={email}
@@ -74,41 +97,27 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
-            />
-            <Input
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              secureTextEntry
-              onSubmitEditing={handleLogin}
+              onSubmitEditing={handleSubmit}
             />
 
             {error && <Text style={styles.error}>{error}</Text>}
 
             <Button
-              label="Sign in"
-              onPress={handleLogin}
+              label="Send reset link"
+              onPress={handleSubmit}
               isLoading={isPending}
               disabled={!canSubmit}
               style={{ marginTop: theme.spacing.sm }}
             />
-
-            <Text
-              style={styles.forgotLink}
-              onPress={() => router.push('/(auth)/forgot-password')}
-            >
-              Forgot password?
-            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          New here?{' '}
-          <Text style={styles.footerLink} onPress={() => router.push('/(auth)/register')}>
-            Create an account
+          Remembered it?{' '}
+          <Text style={styles.footerLink} onPress={() => router.back()}>
+            Sign in
           </Text>
         </Text>
       </View>
@@ -123,40 +132,45 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    gap: theme.spacing.xl,
+    gap: theme.spacing.lg,
   },
   hero: {
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
     paddingVertical: theme.spacing.xl,
   },
-  logoMark: {
+  markPrimary: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.radii.xl,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  markOk: {
     width: 64,
     height: 64,
     borderRadius: theme.radii.xl,
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 6,
   },
-  brand: {
+  title: {
     fontFamily: theme.typography.fontFamily.sans,
     fontWeight: '900',
-    fontSize: 36,
+    fontSize: 28,
     color: theme.colors.text,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  tagline: {
+  body: {
     fontFamily: theme.typography.fontFamily.sans,
     fontSize: 15,
     color: theme.colors.textMuted,
     textAlign: 'center',
-    maxWidth: 280,
-    lineHeight: 22,
+    maxWidth: 320,
+    lineHeight: 21,
   },
   form: {
     gap: theme.spacing.xs,
@@ -167,7 +181,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     letterSpacing: 2,
     fontWeight: '700',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   error: {
     fontFamily: theme.typography.fontFamily.sans,
@@ -175,15 +189,6 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     marginVertical: theme.spacing.sm,
     textAlign: 'center',
-  },
-  forgotLink: {
-    fontFamily: theme.typography.fontFamily.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.sm,
   },
   footer: {
     alignItems: 'center',
@@ -198,5 +203,12 @@ const styles = StyleSheet.create({
   footerLink: {
     color: theme.colors.primary,
     fontWeight: '700',
+  },
+  successBlock: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
   },
 });

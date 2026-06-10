@@ -43,6 +43,29 @@ export const useLoginMutation = () => {
   });
 };
 
+export const useForgotPasswordMutation = () =>
+  useMutation({
+    mutationFn: async (email: string) => {
+      const { data } = await api.post<{ ok: boolean }>('/auth/forgot-password', {
+        email: email.trim().toLowerCase(),
+      });
+      return data;
+    },
+  });
+
+export interface ResetPasswordPayload {
+  token: string;
+  password: string;
+}
+
+export const useResetPasswordMutation = () =>
+  useMutation({
+    mutationFn: async (payload: ResetPasswordPayload) => {
+      const { data } = await api.post<{ ok: boolean }>('/auth/reset-password', payload);
+      return data;
+    },
+  });
+
 export const useRegisterMutation = () => {
   const setAuth = useAuthStore((state) => state.setAuth);
 
