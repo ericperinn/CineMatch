@@ -57,6 +57,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       TMDB_API_KEY: ${TMDB_API_KEY}
       JUSTWATCH_API_KEY: ${JUSTWATCH_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-CineMatch <onboarding@resend.dev>}
+      APP_DEEP_LINK_BASE: ${APP_DEEP_LINK_BASE:-cinematch://reset-password}
       API_PORT: 3000
       NODE_ENV: development
     ports:
